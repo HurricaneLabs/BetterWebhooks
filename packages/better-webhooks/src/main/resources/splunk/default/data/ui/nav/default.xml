@@ -1,0 +1,4 @@
+<nav>
+    <view name="credentials" default="true"/>
+    <view name="alerts" />
+</nav>

@@ -1,0 +1,60 @@
+<form class="form-horizontal form-complex">
+    <div class="control-group">
+        <label class="control-label" for="webhook_url">URL</label>
+
+        <div class="controls">
+            <input type="text" class="input-xlarge" name="action.better_webhook.param.url" id="webhook_url" placeholder="https://your.server.com/foo/bar" />
+        </div>
+    </div>
+    <div class="control-group">
+        <div class="controls">
+            <span class="help-block" style="display: block; position: static; width: auto; margin-left: 0;">
+                Specified URL to send JSON payload via HTTP POST
+                (ex., https://your.server.com/api/v1/webhook). 
+            </span>
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label" for="body_format">Body Format</label>
+
+        <div class="controls">
+            <textarea class="input-xlarge"  rows="8" cols="40" name="action.better_webhook.param.body_format" id="body_format">
+{
+  "sid": $$sid$$,
+  "search_name": $$search_name$$,
+  "app": $$app$$,
+  "owner": $$owner$$,
+  "results_link": $$results_link$$,
+  "result": $$full_result$$
+} 
+            </textarea>
+        </div>
+        <div class="control-group">
+            <div class="controls">
+                <span class="help-block" style="display: block; position: static; width: auto; margin-left: 0;">
+                    Format of JSON POST body. For a POST body identical
+                    to the stock Splunk Webhook action, leave this at
+                    the default value.
+                    <br />
+                    <a href="https://zombo.com" target="_blank"
+                       title="Docs">More info here<i class="icon-external"></i></a>
+                    
+                </span>
+            </div>
+        </div>
+    </div>
+    <splunk-control-group label="Credential">
+        <splunk-search-dropdown name="action.better_webhook.param.credential"
+            search="| rest /servicesNS/nobody/BetterWebhooks/storage/passwords | search realm=better_webhooks | append [|makeresults | eval title=&quot;None&quot;, username=&quot;None (no auth)&quot;]"]"
+            value-field="title" label-field="username">
+        </splunk-search-dropdown> 
+    </splunk-control-group>
+    <div class="control-group">
+        <div class="controls">
+            <span class="help-block" style="display: block; position: static; width: auto; margin-left: 0;">
+                <a href="{{SPLUNKWEB_URL_PREFIX}}/app/BetterWebhooks/credentials" target="_blank"
+                   title="Splunk help">Add new credentials here<i class="icon-external"></i></a>
+            </span>
+        </div>
+    </div>
+</form>
