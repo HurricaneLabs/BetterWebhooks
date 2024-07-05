@@ -2,12 +2,9 @@
 
 ## Overview
 
-The project contains a variety of packages that are published and versioned collectively. Each package lives in its own 
-directory in the `/packages` directory. Each package is self contained, and defines its dependencies in a package.json file.
+BetterWebhooks is built in part using the Splunk UI toolkit. The instructions below for building come from that portion of the app.
 
-We use [Yarn Workspaces](https://yarnpkg.com/lang/en/docs/workspaces/) and [Lerna](https://github.com/lerna/lerna) for
-managing and publishing multiple packages in the same repository.
-
+For docs, go [here](https://betterwebhooks.readthedocs.io/).
 
 ## Getting Started
 
