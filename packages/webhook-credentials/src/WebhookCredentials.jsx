@@ -52,7 +52,13 @@ const WebhookCredentials = () => {
 
     useEffect(() => {
         getCredentials().then((r) => {
-            const list = r.entry.map((entry) => {
+            const filtered = r.entry.filter((entry) => {
+                if ("realm" in entry.content && entry.content.realm == "better_webhooks") {
+                    return true;
+                }
+                return false;
+            });
+            const list = filtered.map((entry) => {
                 console.log(entry.content);
                 if ("realm" in entry.content && entry.content.realm == "better_webhooks") {
                     try {
