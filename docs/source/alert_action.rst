@@ -44,6 +44,14 @@ If your webhook receiver expected the Splunk results to be in a property called
       "details": $$full_result$$
    }
 
+Adaptive response (Enterprise Security)
+----------------------------------------
+At the time of writing, this app doesn't completely work with Enterprise Security
+"adaptive response" actions. You will be able to add the Better Webhook action and set
+a URL as well as a format template, but auth will not save. A workaround for this is to,
+after adding the adaptive response action, navigate to the search in the 
+"Searches, Reports, and Alerts", click "Edit Alert", and add the authentication there.
+
 A warning about tokens
 -----------------------
 You may notice the odd double-dollar-sign tokens in these POST bodies. These are *not*
