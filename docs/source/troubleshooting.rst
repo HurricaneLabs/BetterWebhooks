@@ -1,6 +1,6 @@
-.. _troubleshoting:
+.. _troubleshooting:
 
-Troubleshoting
+Troubleshooting
 ===============
 
 Output from the alert action can be found with the following Splunk search:
