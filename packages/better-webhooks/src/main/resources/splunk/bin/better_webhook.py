@@ -22,9 +22,6 @@ def get_credential(name: str, session_key:str):
     """
     Grab a specific credential from Splunk's credential store and JSON-decode it
     """
-    if not name:
-        return None
-
     url = f"/servicesNS/nobody/BetterWebhooks/storage/passwords/{name}"
 
     server_response, server_content = splunk.rest.simpleRequest(
@@ -93,7 +90,10 @@ if __name__ == "__main__":
         if credential_name == "None":
             credential_name = None
 
-        credential = get_credential(credential_name, session_key=session_key)
+        if credential_name:
+            credential = get_credential(credential_name, session_key=session_key)
+        else:
+            credential = None
 
         sid = settings.get("sid")
         search_name = settings.get("search_name")
