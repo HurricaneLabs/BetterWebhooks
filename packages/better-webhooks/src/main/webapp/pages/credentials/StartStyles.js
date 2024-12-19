@@ -7,7 +7,7 @@ const StyledContainer = styled.div`
     font-size: ${variables.fontSizeLarge};
     line-height: 200%;
     margin: 20px;
-    background-color: ${variables.backgroundColor}
+    background-color: ${variables.backgroundColor};
 `;
 
 const StyledGreeting = styled.div`

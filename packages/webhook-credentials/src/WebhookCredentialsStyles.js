@@ -18,7 +18,6 @@ const StyledHeader = styled.div`
     margin-top: 30px;
     font-weight: bold;
     font-size: 36px;
-
 `;
 
 const AlignRight = styled.div`
@@ -27,5 +26,5 @@ const AlignRight = styled.div`
 
 const DescriptionText = styled.p`
     max-width: 600px;
-`
-export { StyledContainer, AlignRight, StyledHeader, DescriptionText};
+`;
+export { StyledContainer, AlignRight, StyledHeader, DescriptionText };

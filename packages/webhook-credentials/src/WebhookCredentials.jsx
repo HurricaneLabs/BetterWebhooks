@@ -4,13 +4,17 @@ import Table from '@splunk/react-ui/Table';
 import P from '@splunk/react-ui/Paragraph';
 import ExclamationSquare from '@splunk/react-icons/ExclamationSquare';
 
-
 import EditCredentialModal from './EditCredentialModal';
 import NewCredentialModal from './NewCredentialModal';
 import DeleteCredentialModal from './DeleteCredentialModal';
 
-import { StyledContainer, StyledHeader, AlignRight, DescriptionText} from './WebhookCredentialsStyles';
-import { defaultFetchInit, handleResponse } from '@splunk/splunk-utils/fetch';
+import {
+    StyledContainer,
+    StyledHeader,
+    AlignRight,
+    DescriptionText,
+} from './WebhookCredentialsStyles';
+import { getDefaultFetchInit, handleResponse } from '@splunk/splunk-utils/fetch';
 import { getUserTheme } from '@splunk/splunk-utils/themes';
 
 getUserTheme().then((mode) => {
@@ -23,54 +27,58 @@ const propTypes = {
     name: PropTypes.string,
 };
 
-const passwordsEndpoint =
-    '/en-US/splunkd/__raw/servicesNS/nobody/BetterWebhooks/storage/passwords';
+const passwordsEndpoint = '/en-US/splunkd/__raw/servicesNS/nobody/-/storage/passwords';
 
 async function getCredentials() {
     // this function can be used to retrieve passwords if that becomes necessary in your app
-    const fetchInit = defaultFetchInit
+    const fetchInit = getDefaultFetchInit();
     fetchInit.method = 'GET';
-    const n = await fetch(`${passwordsEndpoint}?output_mode=json`, {
+    const creds = await fetch(`${passwordsEndpoint}?output_mode=json`, {
         ...fetchInit,
     }).then(handleResponse(200));
 
-    return n;
+    return creds;
 }
 
-
 const credTypeMap = {
-    basic: "HTTP Basic Auth",
-    header: "Custom HTTP Header",
-    hmac: "HMAC Secret"
+    basic: 'HTTP Basic Auth',
+    header: 'Custom HTTP Header',
+    hmac: 'HMAC Secret',
+    unknown: 'Unknown (failed to parse)',
 };
 
 const WebhookCredentials = () => {
     const [loaded, setLoaded] = useState(false);
-    const [credentials, setCredentials] = useState([])
-
-
+    const [credentials, setCredentials] = useState([]);
 
     useEffect(() => {
         getCredentials().then((r) => {
             const filtered = r.entry.filter((entry) => {
-                if ("realm" in entry.content && entry.content.realm == "better_webhooks") {
+                if ('realm' in entry.content && entry.content.realm == 'better_webhooks') {
                     return true;
                 }
                 return false;
             });
             const list = filtered.map((entry) => {
-                console.log(entry.content);
-                if ("realm" in entry.content && entry.content.realm == "better_webhooks") {
+                if ('realm' in entry.content && entry.content.realm == 'better_webhooks') {
                     try {
                         const cred_obj = JSON.parse(entry.content.clear_password);
                         cred_obj.name = entry.content.username;
+                        cred_obj.app = entry.acl.app;
+                        cred_obj.sharing = entry.acl.sharing;
+                        cred_obj.owner = entry.acl.owner;
                         return cred_obj;
                     } catch (e) {
-                        console.log("Failed to parse credential: " + entry.content.clear_password)
+                        console.log('Failed to parse credential: ' + entry.content.clear_password);
+                        return {
+                            name: entry.content.username,
+                            app: entry.acl.app,
+                            sharing: entry.acl.sharing,
+                            type: 'unknown',
+                        };
                     }
                 }
             });
-
             setCredentials(list);
             setLoaded(true);
         });
@@ -84,13 +92,19 @@ const WebhookCredentials = () => {
                     <NewCredentialModal setLoaded={setLoaded} />
                 </AlignRight>
             </StyledHeader>
-            <DescriptionText>Define any credentials your webhooks need here. Once defined, they will be selectable on the "Better Webhook" alert action page.</DescriptionText>
+            <DescriptionText>
+                Define any credentials your webhooks need here. Once defined, they will be
+                selectable on the "Better Webhook" alert action page.
+            </DescriptionText>
 
             <br />
             <Table>
                 <Table.Head>
                     <Table.HeadCell>Name</Table.HeadCell>
                     <Table.HeadCell>Credential Type</Table.HeadCell>
+                    <Table.HeadCell>App</Table.HeadCell>
+                    <Table.HeadCell>Owner</Table.HeadCell>
+                    <Table.HeadCell>Sharing</Table.HeadCell>
                     <Table.HeadCell>Edit</Table.HeadCell>
                     <Table.HeadCell>Delete</Table.HeadCell>
                 </Table.Head>
@@ -99,6 +113,9 @@ const WebhookCredentials = () => {
                         <Table.Row key={cred.name}>
                             <Table.Cell>{cred.name}</Table.Cell>
                             <Table.Cell>{credTypeMap[cred.type]}</Table.Cell>
+                            <Table.Cell>{cred.app}</Table.Cell>
+                            <Table.Cell>{cred.owner}</Table.Cell>
+                            <Table.Cell>{cred.sharing}</Table.Cell>
                             <Table.Cell>
                                 <EditCredentialModal
                                     key={cred.name}
@@ -110,6 +127,7 @@ const WebhookCredentials = () => {
                             <Table.Cell>
                                 <DeleteCredentialModal
                                     name={cred.name}
+                                    app={cred.app}
                                     setLoaded={setLoaded}
                                 />
                             </Table.Cell>
@@ -117,13 +135,15 @@ const WebhookCredentials = () => {
                     ))}
                 </Table.Body>
             </Table>
-            {credentials.length == 0 &&
+            {credentials.length == 0 && (
                 <>
                     <br />
-                    <P><ExclamationSquare /> No credentials found. Add one by clicking "New Credential".</P>
+                    <P>
+                        <ExclamationSquare /> No credentials found. Add one by clicking "New
+                        Credential".
+                    </P>
                 </>
-            }
-
+            )}
         </StyledContainer>
     );
 };

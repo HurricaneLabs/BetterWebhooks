@@ -10,7 +10,7 @@ getUserTheme()
     .then((theme) => {
         layout(
             <StyledContainer>
-                <WebhookCredentials/>
+                <WebhookCredentials />
             </StyledContainer>,
             {
                 theme,
