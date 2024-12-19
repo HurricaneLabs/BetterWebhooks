@@ -1,38 +1,41 @@
 """
-Lovingly adapted from the original "alert_webhook" app which ships with Splunk. 
+Lovingly adapted from the original "alert_webhook" app which ships with Splunk.
 """
 
+import json
 import os
 import sys
-import json
 import traceback
-import requests
-from hmac_helper import get_hmac_headers
+from typing import Union
 
-import splunk.rest
+import requests
+import splunk.rest  # type: ignore
+from hmac_helper import get_hmac_headers
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "lib"))
 
 from loguru import logger
-logger.remove() # Remove default formatter
+
+logger.remove()  # Remove default formatter
 logger.add(sys.stderr, format="{level} {message}", level="DEBUG")
 
 
-def get_credential(name: str, session_key:str):
+def get_credential(name: str, session_key: str):
     """
     Grab a specific credential from Splunk's credential store and JSON-decode it
     """
-    if not name:
-        return None
-
     url = f"/servicesNS/nobody/BetterWebhooks/storage/passwords/{name}"
 
     server_response, server_content = splunk.rest.simpleRequest(
         url, getargs={"output_mode": "json"}, sessionKey=session_key
     )
 
-    if server_response['status'] != '200':
-        logger.error("Error grabbing credential {}. Response from splunkd was {}", name, str(server_response))
+    if server_response["status"] != "200":
+        logger.error(
+            "Error grabbing credential {}. Response from splunkd was {}",
+            name,
+            str(server_response),
+        )
         raise Exception("Error grabbing credential from splunkd")
 
     # The server response is JSON-encoded
@@ -43,7 +46,7 @@ def get_credential(name: str, session_key:str):
 
 
 def send_webhook_request(
-    url: str, body: bytes, headers: dict, auth: tuple, user_agent: str
+    url: str, body: bytes, headers: dict, auth: Union[tuple, None], user_agent: str
 ):
     """
     Send the webhook and attempt to log as much information as possible if it fails.
@@ -71,10 +74,13 @@ def send_webhook_request(
             logger.error(
                 "Webhook receiver responded with HTTP status={}", r.status_code
             )
-            
+
             return False
     except Exception as e:
-        logger.error("Unhandled exception when attempting to execute alert action. {}", traceback.format_exc())
+        logger.error(
+            "Unhandled exception when attempting to execute alert action. {}",
+            traceback.format_exc(),
+        )
     return False
 
 
@@ -93,7 +99,10 @@ if __name__ == "__main__":
         if credential_name == "None":
             credential_name = None
 
-        credential = get_credential(credential_name, session_key=session_key)
+        if credential_name:
+            credential = get_credential(credential_name, session_key=session_key)
+        else:
+            credential = None
 
         sid = settings.get("sid")
         search_name = settings.get("search_name")
@@ -123,9 +132,9 @@ if __name__ == "__main__":
         elif credential["type"] == "header":
             auth = None
             headers = {
-                credential.get("header_name")
-                .strip(): credential.get("header_value")
-                .strip()
+                credential.get("header_name").strip(): credential.get(
+                    "header_value"
+                ).strip()
             }
         elif credential["type"] == "hmac":
             auth = None
@@ -148,5 +157,8 @@ if __name__ == "__main__":
         if not send_webhook_request(url, body, headers, auth, user_agent=user_agent):
             sys.exit(2)
     except Exception as e:
-        logger.error("Unhandled exception when attempting to execute alert action. {}", traceback.format_exc())
+        logger.error(
+            "Unhandled exception when attempting to execute alert action. {}",
+            traceback.format_exc(),
+        )
         sys.exit(3)

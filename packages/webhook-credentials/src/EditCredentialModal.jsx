@@ -8,14 +8,13 @@ import Text from '@splunk/react-ui/Text';
 
 import GenericCredForm from './CredentialForms';
 
-import { defaultFetchInit, handleResponse, handleError } from '@splunk/splunk-utils/fetch';
+import { getDefaultFetchInit, handleResponse, handleError } from '@splunk/splunk-utils/fetch';
 
-const passwordsEndpoint =
-    '/en-US/splunkd/__raw/servicesNS/nobody/BetterWebhooks/storage/passwords';
+const passwordsEndpoint = '/en-US/splunkd/__raw/servicesNS/nobody/BetterWebhooks/storage/passwords';
 
 async function saveExistingCredential(credential, name) {
     // this function can be used to retrieve passwords if that becomes necessary in your app
-    const fetchInit = defaultFetchInit;
+    const fetchInit = getDefaultFetchInit();
     fetchInit.method = 'POST';
 
     const n = await fetch(`${passwordsEndpoint}/better_webhooks:${name}:`, {
@@ -51,17 +50,17 @@ function EditCredentialModal(props) {
 
     const handleChangeUsername = (event) => {
         setUsername(event.target.value);
-    }
+    };
 
     const handleChangePassword = (event) => {
         setPassword(event.target.value);
-    }
+    };
 
     const handleSubmit = (event) => {
         event.preventDefault();
         saveExistingCredential(credential, props.name);
         setOpen(false);
-    }
+    };
 
     return (
         <>
@@ -72,7 +71,6 @@ function EditCredentialModal(props) {
                 returnFocus={modalToggle}
                 style={{ width: '600px' }}
             >
-
                 <form onSubmit={handleSubmit}>
                     <Modal.Header
                         onRequestClose={handleRequestClose}
@@ -82,13 +80,13 @@ function EditCredentialModal(props) {
 
                     <Modal.Body>
                         <ControlGroup label="Name">
-                            <Text
-                                disabled
-                                value={props.name}
-                            />
-
+                            <Text disabled value={props.name} />
                         </ControlGroup>
-                        <GenericCredForm type={props.type} cred={credential} setCredential={setCredential} />
+                        <GenericCredForm
+                            type={props.type}
+                            cred={credential}
+                            setCredential={setCredential}
+                        />
                     </Modal.Body>
                     <Modal.Footer>
                         <Button

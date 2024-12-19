@@ -7,13 +7,12 @@ import P from '@splunk/react-ui/Paragraph';
 
 import { defaultFetchInit, handleResponse, handleError } from '@splunk/splunk-utils/fetch';
 
-const passwordsEndpoint =
-    '/en-US/splunkd/__raw/servicesNS/nobody/BetterWebhooks/storage/passwords';
-
-async function deleteCredential(name) {
+async function deleteCredential(name, app) {
     // this function can be used to retrieve passwords if that becomes necessary in your app
     const fetchInit = defaultFetchInit;
     fetchInit.method = 'DELETE';
+
+    const passwordsEndpoint = `/en-US/splunkd/__raw/servicesNS/nobody/${app}/storage/passwords`;
 
     const n = await fetch(`${passwordsEndpoint}/better_webhooks:${name}:`, {
         ...fetchInit,
@@ -23,8 +22,6 @@ async function deleteCredential(name) {
         .catch((err) => (err instanceof Object ? 'error' : err)); // handleError sometimes returns an Object;
     return n;
 }
-
-
 
 function DeleteCredentialModal(props) {
     const modalToggle = useRef(null);
@@ -45,17 +42,19 @@ function DeleteCredentialModal(props) {
         }
     };
 
-
     const handleSubmit = (event) => {
         event.preventDefault();
-        deleteCredential(props.name)
-            .then(props.setLoaded(false))
-            .then(setOpen(false));
-    }
+        deleteCredential(props.name, props.app).then(props.setLoaded(false)).then(setOpen(false));
+    };
 
     return (
         <>
-            <Button appearance="destructive" onClick={handleRequestOpen} ref={modalToggle} label="Delete" />
+            <Button
+                appearance="destructive"
+                onClick={handleRequestOpen}
+                ref={modalToggle}
+                label="Delete"
+            />
             <Modal
                 onRequestClose={handleRequestClickAway}
                 open={open}
@@ -66,7 +65,6 @@ function DeleteCredentialModal(props) {
                     <Modal.Header
                         onRequestClose={handleRequestClose}
                         title={`Delete credential`}
-
                         icon={<Layout width="100%" height="100%" />}
                     />
 
