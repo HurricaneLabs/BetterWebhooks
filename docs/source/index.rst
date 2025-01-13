@@ -8,6 +8,10 @@ POST body.
 
 Release History
 ----------------
+1.1.1
+_____
+Add back an apparently-important item to default.meta that was removed in 1.1.0.
+
 1.1.0
 _____
 Adds the ability to store credentials in different apps, as well as the ability to

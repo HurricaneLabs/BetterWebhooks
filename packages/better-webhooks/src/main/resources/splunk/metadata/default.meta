@@ -7,3 +7,6 @@ access = read : [ * ], write : [ admin, power ]
 [restmap]
 export = system
 access = read : [ * ], write : [ admin, power ]
+
+[alerts]
+export = system
