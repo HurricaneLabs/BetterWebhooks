@@ -8,6 +8,11 @@ POST body.
 
 Release History
 ----------------
+1.1.2
+-----
+Restrict write access in metadata in order to comply with new app vetting requirement.
+Add error messages when user is lacking permissions to list/edit credentials.
+
 1.1.1
 _____
 Add back an apparently-important item to default.meta that was removed in 1.1.0.
