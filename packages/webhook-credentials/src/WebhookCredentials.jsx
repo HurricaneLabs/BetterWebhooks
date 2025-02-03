@@ -84,7 +84,7 @@ const WebhookCredentials = () => {
             setLoaded(true);
         })
         .catch(error_resp => {
-            setError("Failed to create new credential. Do you have either the edit_storage_passwords or admin_all_objects capability?");
+            setError("Failed to list credentials. Do you have either the list_storage_passwords or admin_all_objects capability?");
         });
     }, [loaded]);
 
