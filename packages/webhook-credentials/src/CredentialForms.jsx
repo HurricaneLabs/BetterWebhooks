@@ -3,6 +3,7 @@ import React, { useState, useRef } from 'react';
 import Text from '@splunk/react-ui/Text';
 import Select from '@splunk/react-ui/Select';
 import ControlGroup from '@splunk/react-ui/ControlGroup';
+import Message from '@splunk/react-ui/Message';
 
 function HTTPCredForm(props) {
     const handleChangeUsername = (event) => {
@@ -210,6 +211,11 @@ function HMACForm(props) {
 function GenericCredForm(props) {
     return (
         <>
+            { props.error && 
+                <Message appearance="fill" type="error">
+                    {props.error}
+                </Message>
+            }
             {props.type == 'basic' && (
                 <HTTPCredForm cred={props.cred} setCredential={props.setCredential} />
             )}

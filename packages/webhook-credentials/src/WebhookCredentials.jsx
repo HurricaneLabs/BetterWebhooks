@@ -50,6 +50,7 @@ const credTypeMap = {
 const WebhookCredentials = () => {
     const [loaded, setLoaded] = useState(false);
     const [credentials, setCredentials] = useState([]);
+    const [error, setError] = useState();
 
     useEffect(() => {
         getCredentials().then((r) => {
@@ -81,6 +82,9 @@ const WebhookCredentials = () => {
             });
             setCredentials(list);
             setLoaded(true);
+        })
+        .catch(error_resp => {
+            setError("Failed to create new credential. Do you have either the edit_storage_passwords or admin_all_objects capability?");
         });
     }, [loaded]);
 
@@ -135,7 +139,16 @@ const WebhookCredentials = () => {
                     ))}
                 </Table.Body>
             </Table>
-            {credentials.length == 0 && (
+            {error && (
+                <>
+                    <br />
+                    <P>
+                        <ExclamationSquare style={{ color: 'red' }}/> {error}
+                    </P>
+                </>
+            )}
+            
+            {!error && credentials.length == 0 && (
                 <>
                     <br />
                     <P>

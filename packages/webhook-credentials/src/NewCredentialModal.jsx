@@ -9,6 +9,7 @@ import Text from '@splunk/react-ui/Text';
 import Switch from '@splunk/react-ui/Switch';
 import ControlGroup from '@splunk/react-ui/ControlGroup';
 
+
 import { getDefaultFetchInit, handleResponse, handleError } from '@splunk/splunk-utils/fetch';
 
 import GenericCredForm from './CredentialForms';
@@ -100,6 +101,7 @@ function NewCredentialModal(props) {
     const [selectedSharing, setSelectedSharing] = useState('global');
     const [readPerms, setReadPerms] = useState('*');
     const [writePerms, setWritePerms] = useState('*');
+    const [error, setError] = useState();
 
     const handleRequestOpen = () => {
         setOpen(true);
@@ -107,11 +109,13 @@ function NewCredentialModal(props) {
 
     const handleRequestClose = () => {
         setOpen(false);
+        setError(null);
     };
 
     const handleRequestClickAway = ({ reason }) => {
         if (reason === 'escapeKey') {
             setOpen(false);
+            setError(null);
         }
     };
 
@@ -129,17 +133,29 @@ function NewCredentialModal(props) {
 
     const handleSubmit = (event) => {
         event.preventDefault();
+
         saveNewCredential(credential, name, selectedApp)
-            .then((ret) =>
-                updateSharing(ret.url, ret.author, selectedSharing, readPerms, writePerms)
+            .then((ret) => {
+                updateSharing(ret.url, ret.author, selectedSharing, readPerms, writePerms);
+            }
             )
-            .then(setOpen(false))
-            .then(
+            .catch(error => {
+                console.error('There was a problem with the fetch operation:', error);
+                setError("Failed to create new credential. Do you have either the edit_storage_passwords or admin_all_objects capability?");
+                // So that the next steps don't execute if this fails.
+                // Surely there's a better way to do this but I'm not skilled with JS
+                return Promise.reject(error);
+            })
+            .then(() => {
+                setOpen(false);
+                setError(null);
+            })
+            .then(() => {
                 setTimeout(() => {
                     props.setLoaded(false);
-                }),
-                10
-            );
+                }, 10);
+            });
+            
     };
 
     const handleAdvancedClick = useCallback(() => {
@@ -199,6 +215,7 @@ function NewCredentialModal(props) {
                             type={credType}
                             cred={credential}
                             setCredential={setCredential}
+                            error={error}
                         />
 
                         <Switch
