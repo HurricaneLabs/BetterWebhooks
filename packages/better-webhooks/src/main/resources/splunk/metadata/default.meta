@@ -10,3 +10,4 @@ access = read : [ * ], write : [ admin, power ]
 
 [alerts]
 export = system
+access = read : [ * ], write : [ admin, power ]
