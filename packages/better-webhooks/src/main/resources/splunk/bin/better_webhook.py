@@ -7,6 +7,7 @@ import os
 import sys
 import traceback
 from typing import Union
+from urllib.parse import urlparse
 
 import requests
 import splunk.rest  # type: ignore
@@ -94,6 +95,11 @@ if __name__ == "__main__":
         session_key = settings["session_key"]
 
         url = settings["configuration"].get("url")
+        if url:
+            parsed_url = urlparse(url)
+            if parsed_url.scheme != "https":
+                logger.error("URL scheme must be HTTPS")
+                sys.exit(1)
         body_format = settings["configuration"].get("body_format")
         credential_name = settings["configuration"].get("credential")
         if credential_name == "None":

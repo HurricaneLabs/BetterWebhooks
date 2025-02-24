@@ -8,6 +8,10 @@ POST body.
 
 Release History
 ----------------
+1.1.3/1.1.4
+-----
+Changes requested by Splunk Cloud vetting.
+
 1.1.2
 -----
 Restrict write access in metadata in order to comply with new app vetting requirement.
