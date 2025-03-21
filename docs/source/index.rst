@@ -8,6 +8,12 @@ POST body.
 
 Release History
 ----------------
+
+1.1.5
+-----
+Remove some (accidental) whitespace in the default POST body which can break some JSON
+parsers (thanks to Matt Anderson!)
+
 1.1.3/1.1.4
 -----
 Changes requested by Splunk Cloud vetting.
