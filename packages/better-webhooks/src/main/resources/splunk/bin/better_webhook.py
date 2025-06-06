@@ -11,6 +11,7 @@ from urllib.parse import urlparse
 
 import requests
 import splunk.rest  # type: ignore
+from splunk.clilib import cli_common as cli  # type: ignore
 from hmac_helper import get_hmac_headers
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "lib"))
@@ -47,7 +48,7 @@ def get_credential(name: str, session_key: str):
 
 
 def send_webhook_request(
-    url: str, body: bytes, headers: dict, auth: Union[tuple, None], user_agent: str
+    url: str, body: bytes, headers: dict, auth: Union[tuple, None], user_agent: str, proxy: str
 ):
     """
     Send the webhook and attempt to log as much information as possible if it fails.
@@ -56,6 +57,14 @@ def send_webhook_request(
         logger.error("No URL provided")
         return False
 
+    if proxy:
+        proxies = {
+            "http": proxy,
+            "https": proxy,
+        }
+    else:
+        proxies = None
+    
     headers["Content-Type"] = "application/json"
     headers["User-Agent"] = user_agent
     logger.info(
@@ -65,7 +74,7 @@ def send_webhook_request(
     )
 
     try:
-        r = requests.post(url, data=body, headers=headers, auth=auth)
+        r = requests.post(url, data=body, headers=headers, auth=auth, proxies=proxies)
         logger.debug("Response body was {}", r.text)
 
         if 200 <= r.status_code < 300:
@@ -91,6 +100,8 @@ if __name__ == "__main__":
         sys.exit(1)
     try:
         settings = json.loads(sys.stdin.read())
+        global_settings = cli.getConfStanza("better_webhooks", "settings")
+        proxy = global_settings.get("proxy").strip()
 
         session_key = settings["session_key"]
 
@@ -160,7 +171,7 @@ if __name__ == "__main__":
             )
 
         user_agent = settings["configuration"].get("user_agent", "Splunk")
-        if not send_webhook_request(url, body, headers, auth, user_agent=user_agent):
+        if not send_webhook_request(url, body, headers, auth, user_agent=user_agent, proxy=proxy):
             sys.exit(2)
     except Exception as e:
         logger.error(
