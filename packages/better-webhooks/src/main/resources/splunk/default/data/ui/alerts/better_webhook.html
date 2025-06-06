@@ -62,15 +62,19 @@
             </div>
         </div>
     </div>
-    <splunk-control-group label="Credential">
+    <div class="control-group">
+        <label class="control-label" for="better_webhook.credential">Credential</label>
+        <div class="controls">
         <splunk-search-dropdown
             name="action.better_webhook.param.credential"
+            id="better_webhook.credential"
             search='| rest /servicesNS/-/-/storage/passwords | search realm=better_webhooks | append [|makeresults | eval title="None", username="None (no auth)"]'
             value-field="title"
             label-field="username"
         >
         </splunk-search-dropdown>
-    </splunk-control-group>
+        </div>
+    </div>
     <div class="control-group">
         <div class="controls">
             <span
