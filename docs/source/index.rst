@@ -9,6 +9,12 @@ POST body.
 Release History
 ----------------
 
+1.1.6
+-----
+* Adds a proxy setting which can be set in ``better_webhooks.conf`` to apply to all requests made by the alert action.
+* Fixes a bug where the credential dropdown was not populated when used as an ES adaptive response action.
+* Adds default alert action settings to alert_actions.conf (Thanks Matt Anderson!)
+
 1.1.5
 -----
 Remove some (accidental) whitespace in the default POST body which can break some JSON
@@ -49,5 +55,5 @@ Documentation
    credentials
    alert_action
    troubleshooting
-
+   proxy
 
