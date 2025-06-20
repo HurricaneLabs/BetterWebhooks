@@ -9,6 +9,10 @@ POST body.
 Release History
 ----------------
 
+1.1.7
+-----
+* Fix bug where HMAC timestamp header being unset in a credential would cause the alert action to fail.
+
 1.1.6
 -----
 * Adds a proxy setting which can be set in ``better_webhooks.conf`` to apply to all requests made by the alert action.

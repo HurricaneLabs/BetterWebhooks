@@ -183,7 +183,7 @@ function HMACForm(props) {
                 </Select>
             </ControlGroup>
             <ControlGroup
-                label="HMAC Secret Header"
+                label="HMAC Signature Header"
                 tooltip="The HTTP header that the HMAC signature will be sent in"
                 help="e.g. X-Sign"
             >
