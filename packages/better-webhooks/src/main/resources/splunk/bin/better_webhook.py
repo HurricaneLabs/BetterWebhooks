@@ -158,8 +158,8 @@ if __name__ == "__main__":
             hmac_secret = credential.get("hmac_secret")
             hmac_hash_function = credential.get("hmac_hash_function")
             hmac_digest_type = credential.get("hmac_digest_type")
-            hmac_sig_header = credential.get("hmac_sig_header").strip()
-            hmac_time_header = credential.get("hmac_time_header").strip()
+            hmac_sig_header = credential.get("hmac_sig_header", "").strip()
+            hmac_time_header = credential.get("hmac_time_header", "").strip()
 
             headers = get_hmac_headers(
                 body=body,
