@@ -8,24 +8,7 @@ import Text from '@splunk/react-ui/Text';
 
 import GenericCredForm from './CredentialForms';
 
-import { getDefaultFetchInit, handleResponse, handleError } from '@splunk/splunk-utils/fetch';
-
-const passwordsEndpoint = '/en-US/splunkd/__raw/servicesNS/nobody/BetterWebhooks/storage/passwords';
-
-async function saveExistingCredential(credential, name) {
-    // this function can be used to retrieve passwords if that becomes necessary in your app
-    const fetchInit = getDefaultFetchInit();
-    fetchInit.method = 'POST';
-
-    const n = await fetch(`${passwordsEndpoint}/better_webhooks:${name}:`, {
-        ...fetchInit,
-        body: `password=${JSON.stringify(credential)}`,
-    })
-        .then(handleResponse(200))
-        .catch(handleError('error'))
-        .catch((err) => (err instanceof Object ? 'error' : err)); // handleError sometimes returns an Object;
-    return n;
-}
+import { saveExistingCredential } from './http_utils';
 
 function EditCredentialModal(props) {
     const modalToggle = useRef(null);
