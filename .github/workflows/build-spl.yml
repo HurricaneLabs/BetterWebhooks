@@ -1,0 +1,75 @@
+name: Build BetterWebhooks.spl
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  release:
+    types: [ created ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18.x'
+        cache: 'yarn'
+
+    - name: Install dependencies
+      run: yarn install --frozen-lockfile
+
+    - name: Build BetterWebhooks.spl
+      run: yarn run package
+
+    - name: Upload BetterWebhooks.spl artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: BetterWebhooks-spl
+        path: BetterWebhooks.spl
+        retention-days: 30
+
+    - name: Verify artifact
+      run: |
+        echo "Verifying BetterWebhooks.spl was created..."
+        ls -la BetterWebhooks.spl
+        echo "Archive contents:"
+        tar -tzf BetterWebhooks.spl | head -20
+
+  # Job to create a release artifact (only on release events)
+  release:
+    if: github.event_name == 'release'
+    needs: build
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18.x'
+        cache: 'yarn'
+
+    - name: Install dependencies
+      run: yarn install --frozen-lockfile
+
+    - name: Build BetterWebhooks.spl
+      run: yarn run package
+
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ./BetterWebhooks.spl
+        asset_name: BetterWebhooks.spl
+        asset_content_type: application/gzip
