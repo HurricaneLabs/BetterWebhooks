@@ -65,7 +65,9 @@ def send_webhook_request(
     else:
         proxies = None
     
-    headers["Content-Type"] = "application/json"
+    if len(body) > 0:
+        headers["Content-Type"] = "application/json"
+    
     headers["User-Agent"] = user_agent
     logger.info(
         "Sending POST request to url={} with size={} bytes payload",
@@ -128,14 +130,17 @@ if __name__ == "__main__":
         results_link = settings.get("results_link")
         result = settings.get("result")
 
-        body = (
-            body_format.replace("$sid$", json.dumps(sid))
-            .replace("$search_name$", json.dumps(search_name))
-            .replace("$app$", json.dumps(app))
-            .replace("$owner$", json.dumps(owner))
-            .replace("$results_link$", json.dumps(results_link))
-            .replace("$full_result$", json.dumps(result))
-        )
+        if body_format.strip() == "$none$":
+            body = ""
+        else:
+            body = (
+                body_format.replace("$sid$", json.dumps(sid))
+                .replace("$search_name$", json.dumps(search_name))
+                .replace("$app$", json.dumps(app))
+                .replace("$owner$", json.dumps(owner))
+                .replace("$results_link$", json.dumps(results_link))
+                .replace("$full_result$", json.dumps(result))
+            )
 
         logger.debug("Body: {}", repr(body))
         body = body.encode()
