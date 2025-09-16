@@ -211,11 +211,11 @@ function HMACForm(props) {
 function GenericCredForm(props) {
     return (
         <>
-            { props.error && 
+            {props.error && (
                 <Message appearance="fill" type="error">
                     {props.error}
                 </Message>
-            }
+            )}
             {props.type == 'basic' && (
                 <HTTPCredForm cred={props.cred} setCredential={props.setCredential} />
             )}

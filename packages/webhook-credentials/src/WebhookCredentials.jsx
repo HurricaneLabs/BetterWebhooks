@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import Table from '@splunk/react-ui/Table';
 import P from '@splunk/react-ui/Paragraph';
-import ExclamationSquare from '@splunk/react-icons/ExclamationSquare';
 
 import EditCredentialModal from './EditCredentialModal';
 import NewCredentialModal from './NewCredentialModal';
 import DeleteCredentialModal from './DeleteCredentialModal';
+import StatusMessage from './StatusMessage';
 
 import {
     StyledContainer,
@@ -14,7 +14,7 @@ import {
     AlignRight,
     DescriptionText,
 } from './WebhookCredentialsStyles';
-import { getDefaultFetchInit, handleResponse } from '@splunk/splunk-utils/fetch';
+import { getCredentials } from './http_utils';
 import { getUserTheme } from '@splunk/splunk-utils/themes';
 
 getUserTheme().then((mode) => {
@@ -27,19 +27,6 @@ const propTypes = {
     name: PropTypes.string,
 };
 
-const passwordsEndpoint = '/en-US/splunkd/__raw/servicesNS/nobody/-/storage/passwords';
-
-async function getCredentials() {
-    // this function can be used to retrieve passwords if that becomes necessary in your app
-    const fetchInit = getDefaultFetchInit();
-    fetchInit.method = 'GET';
-    const creds = await fetch(`${passwordsEndpoint}?output_mode=json`, {
-        ...fetchInit,
-    }).then(handleResponse(200));
-
-    return creds;
-}
-
 const credTypeMap = {
     basic: 'HTTP Basic Auth',
     header: 'Custom HTTP Header',
@@ -47,45 +34,51 @@ const credTypeMap = {
     unknown: 'Unknown (failed to parse)',
 };
 
+function formatCredential(entry) {
+    try {
+        const cred_obj = JSON.parse(entry.content.clear_password);
+        cred_obj.name = entry.content.username;
+        cred_obj.app = entry.acl.app;
+        cred_obj.sharing = entry.acl.sharing;
+        cred_obj.owner = entry.acl.owner;
+        return cred_obj;
+    } catch (error) {
+        console.log('Failed to parse credential: ' + entry.content.clear_password);
+        return {
+            name: entry.content.username,
+            app: entry.acl.app,
+            sharing: entry.acl.sharing,
+            owner: entry.acl.owner,
+            type: 'unknown',
+        };
+    }
+}
+
 const WebhookCredentials = () => {
     const [loaded, setLoaded] = useState(false);
     const [credentials, setCredentials] = useState([]);
     const [error, setError] = useState();
 
     useEffect(() => {
-        getCredentials().then((r) => {
-            const filtered = r.entry.filter((entry) => {
-                if ('realm' in entry.content && entry.content.realm == 'better_webhooks') {
-                    return true;
-                }
-                return false;
-            });
-            const list = filtered.map((entry) => {
-                if ('realm' in entry.content && entry.content.realm == 'better_webhooks') {
-                    try {
-                        const cred_obj = JSON.parse(entry.content.clear_password);
-                        cred_obj.name = entry.content.username;
-                        cred_obj.app = entry.acl.app;
-                        cred_obj.sharing = entry.acl.sharing;
-                        cred_obj.owner = entry.acl.owner;
-                        return cred_obj;
-                    } catch (e) {
-                        console.log('Failed to parse credential: ' + entry.content.clear_password);
-                        return {
-                            name: entry.content.username,
-                            app: entry.acl.app,
-                            sharing: entry.acl.sharing,
-                            type: 'unknown',
-                        };
-                    }
-                }
-            });
-            setCredentials(list);
-            setLoaded(true);
-        })
-        .catch(error_resp => {
-            setError("Failed to list credentials. Do you have either the list_storage_passwords or admin_all_objects capability?");
-        });
+        async function getAndFormatCredentials() {
+            const creds = await getCredentials();
+            const filtered = creds.entry
+                .filter((entry) => {
+                    // Skip credentials from other realms
+                    return 'realm' in entry.content && entry.content.realm === 'better_webhooks';
+                })
+                .map((entry) => {
+                    const formatted = formatCredential(entry);
+                    return formatted;
+                });
+            setCredentials(filtered);
+        }
+        try {
+            getAndFormatCredentials();
+        } catch (error) {
+            setError(error.message || String(error));
+        }
+        setLoaded(true);
     }, [loaded]);
 
     return (
@@ -139,24 +132,7 @@ const WebhookCredentials = () => {
                     ))}
                 </Table.Body>
             </Table>
-            {error && (
-                <>
-                    <br />
-                    <P>
-                        <ExclamationSquare style={{ color: 'red' }}/> {error}
-                    </P>
-                </>
-            )}
-            
-            {!error && credentials.length == 0 && (
-                <>
-                    <br />
-                    <P>
-                        <ExclamationSquare /> No credentials found. Add one by clicking "New
-                        Credential".
-                    </P>
-                </>
-            )}
+            <StatusMessage error={error} loaded={loaded} credentialsCount={credentials.length} />
         </StyledContainer>
     );
 };

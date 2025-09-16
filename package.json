@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "build": "lerna run build",
+    "package": "node package.js",
     "format": "git ls-files | grep -E \"\\.(jsx?|css)$\" | xargs prettier --write",
     "format:verify": "git ls-files | grep -E \"\\.(jsx?|css)$\" | xargs prettier --list-different",
     "lint": "lerna run lint --no-sort",
