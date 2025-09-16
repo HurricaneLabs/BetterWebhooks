@@ -9,6 +9,12 @@ POST body.
 Release History
 ----------------
 
+1.1.8
+-----
+* Add support for sending empty POST bodies by using the ``$none$`` token in the body format field. When this token is used, no Content-Type header is sent with the request.
+* Refactor HTTP code in the webhook credentials management interface for better error handling and maintainability.
+* Fix bug where ampersands (&) in passwords would break HTTP calls due to improper URL encoding.
+
 1.1.7
 -----
 * Fix bug where HMAC timestamp header being unset in a credential would cause the alert action to fail.

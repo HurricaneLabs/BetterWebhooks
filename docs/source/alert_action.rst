@@ -11,7 +11,7 @@ Body Format
 ------------
 
 First of all, if you just need your POST body to look identical to Splunk's stock
-webhook alert action, just leave this at the default, which should like this...
+webhook alert action, just leave this at the default, which should look like this...
 
 .. code-block::  
 
@@ -43,6 +43,26 @@ If your webhook receiver expected the Splunk results to be in a property called
       "title": $$search_name,
       "details": $$full_result$$
    }
+
+If you need to send an empty POST body (useful for simple notification webhooks that
+don't require data), you can use the special ``$$none$$`` token (this cannot be combined with other tokens):
+
+.. code-block:: 
+
+   $$none$$
+
+Available Tokens
+-----------------
+
+The following tokens are available for use in the POST body format:
+
+* ``$$sid$$`` - The search ID
+* ``$$search_name$$`` - The name of the search
+* ``$$app$$`` - The app name
+* ``$$owner$$`` - The owner of the search
+* ``$$results_link$$`` - A link to the search results
+* ``$$full_result$$`` - The complete search results
+* ``$$none$$`` - Special token that sends an empty POST body with no Content-Type header
 
 Adaptive response (Enterprise Security)
 ----------------------------------------
