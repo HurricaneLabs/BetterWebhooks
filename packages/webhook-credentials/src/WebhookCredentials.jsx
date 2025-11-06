@@ -31,6 +31,7 @@ const credTypeMap = {
     basic: 'HTTP Basic Auth',
     header: 'Custom HTTP Header',
     hmac: 'HMAC Secret',
+    oauth: 'OAuth Client Credential',
     unknown: 'Unknown (failed to parse)',
 };
 

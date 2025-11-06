@@ -13,6 +13,7 @@ import requests
 import splunk.rest  # type: ignore
 from splunk.clilib import cli_common as cli  # type: ignore
 from hmac_helper import get_hmac_headers
+from oauth_helper import get_oauth_headers
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "lib"))
 
@@ -45,7 +46,6 @@ def get_credential(name: str, session_key: str):
 
     # And so is the credential itself
     return json.loads(credential)
-
 
 def send_webhook_request(
     url: str, body: bytes, headers: dict, auth: Union[tuple, None], user_agent: str, proxy: str
@@ -173,6 +173,19 @@ if __name__ == "__main__":
                 hmac_digest_type=hmac_digest_type,
                 hmac_sig_header=hmac_sig_header,
                 hmac_time_header=hmac_time_header,
+            )
+        elif credential["type"] == "oauth":
+            auth = None
+            oauth_client_id = credential.get("oauth_client_id")
+            oauth_client_secret = credential.get("oauth_client_secret")
+            oauth_token_url = credential.get("oauth_token_url").strip()
+            oauth_scope = credential.get("oauth_scope", "").strip()
+
+            headers = get_oauth_headers(
+                client_id=oauth_client_id, 
+                client_secret=oauth_client_secret, 
+                token_url=oauth_token_url, 
+                scope=oauth_scope
             )
 
         user_agent = settings["configuration"].get("user_agent", "Splunk")
