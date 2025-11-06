@@ -64,10 +64,10 @@ def send_webhook_request(
         }
     else:
         proxies = None
-    
+
     if len(body) > 0:
         headers["Content-Type"] = "application/json"
-    
+
     headers["User-Agent"] = user_agent
     logger.info(
         "Sending POST request to url={} with size={} bytes payload",
@@ -83,11 +83,10 @@ def send_webhook_request(
             logger.info("Webhook receiver responded with HTTP status={}", r.status_code)
             return True
         else:
-            logger.error(
-                "Webhook receiver responded with HTTP status={}", r.status_code
-            )
-
+            logger.error(f"Webhook receiver responded with HTTP status {r.status_code} "
+                         "and message: '{r.text}'")
             return False
+
     except Exception as e:
         logger.error(
             "Unhandled exception when attempting to execute alert action. {}",
