@@ -32,20 +32,6 @@ yarn run package
 This runs the full build and packages the output into a `.spl` archive in the project root. This is the file you install
 into Splunk or submit to Splunkbase.
 
-## Developer Scripts
-
-Commands run from the root directory will be applied to all packages. This is handy when working on multiple packages
-simultaneously. Commands can also be run from individual packages. This may be better for performance and reporting when
-only working on a single package. All of the packages have similar developer scripts, but not all scripts are implemented
-for every package. See the `package.json` of the package in question to see which scripts are available there.
-
-For more granular control of development scripts, consider using [Lerna](https://github.com/lerna/lerna) directly.
-
-## Code Formatting
-
-BetterWebhooks uses [prettier](https://github.com/prettier/prettier) to ensure consistent code formatting. It is recommended
-to [add a prettier plugin to your editor/ide](https://github.com/prettier/prettier#editor-integration).
-
 ## Linting and Validation
 
 ### Python (ruff)

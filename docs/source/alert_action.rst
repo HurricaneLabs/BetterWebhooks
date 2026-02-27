@@ -40,7 +40,7 @@ If your webhook receiver expected the Splunk results to be in a property called
 .. code-block:: 
 
    {
-      "title": $$search_name,
+      "title": $$search_name$$,
       "details": $$full_result$$
    }
 
