@@ -9,6 +9,15 @@ POST body.
 Release History
 ----------------
 
+1.2.1
+-----
+* Fix credential lookup URL to include realm prefix, resolving failures on Splunk Cloud (thanks rsrdesarrollo)
+* Add OAuth client credentials support (thanks ivohechmann)
+* Log webhook response body at INFO level on success, making it visible without debug logging
+* Log webhook response body on error responses (thanks plup)
+* Document required Splunk capabilities for managing credentials
+* Fix credentials page not displaying entries when total Splunk credential count exceeds the server-side limit of 100
+
 1.1.8
 -----
 * Add support for sending empty POST bodies by using the ``$none$`` token in the body format field. When this token is used, no Content-Type header is sent with the request.

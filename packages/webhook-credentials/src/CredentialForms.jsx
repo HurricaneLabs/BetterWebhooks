@@ -208,6 +208,97 @@ function HMACForm(props) {
     );
 }
 
+function OAuthForm(props) {
+    const handleChangeClientID = (event) => {
+        let credential = {
+            type: 'oauth',
+            oauth_client_id: event.target.value,
+            oauth_client_secret: props.cred.oauth_client_secret,
+            oauth_token_url: props.cred.oauth_token_url,
+            oauth_scope: props.cred.oauth_scope,
+        };
+        props.setCredential(credential);
+    };
+
+    const handleChangeClientSecret = (event, { value }) => {
+        let credential = {
+            type: 'oauth',
+            oauth_client_id: props.cred.oauth_client_id,
+            oauth_client_secret: value,
+            oauth_token_url: props.cred.oauth_token_url,
+            oauth_scope: props.cred.oauth_scope,
+        };
+        props.setCredential(credential);
+    };
+
+    const handleChangeTokenUrl = (event, { value }) => {
+        let credential = {
+            type: 'oauth',
+            oauth_client_id: props.cred.oauth_client_id,
+            oauth_client_secret: props.cred.oauth_client_secret,
+            oauth_token_url: value,
+            oauth_scope: props.cred.oauth_scope,
+        };
+        props.setCredential(credential);
+    };
+
+    const handleChangeScope = (event) => {
+        let credential = {
+            type: 'oauth',
+            oauth_client_id: props.cred.oauth_client_id,
+            oauth_client_secret: props.cred.oauth_client_secret,
+            oauth_token_url: props.cred.oauth_token_url,
+            oauth_scope: event.target.value,
+        };
+        props.setCredential(credential);
+    };
+
+    return (
+        <>
+            <ControlGroup label="Credential ID" tooltip="OAuth client credential ID (UUID)">
+                <Text
+                    value={props.cred.oauth_client_id}
+                    type="text"
+                    autoComplete="off"
+                    canClear
+                    onChange={handleChangeClientID}
+                />
+            </ControlGroup>
+            <ControlGroup label="Credential secret" tooltip="OAuth client credential secret">
+                <Text
+                    value={props.cred.oauth_client_secret}
+                    passwordVisibilityToggle
+                    type="password"
+                    autoComplete="off"
+                    canClear
+                    onChange={handleChangeClientSecret}
+                />
+            </ControlGroup>
+
+            <ControlGroup
+                label="Token URL"
+                tooltip="Endpoint to retrieve the access token"
+                help="e.g. https://login.microsoftonline.com/xxx/oauth2/v2.0/token"
+            >
+                <Text
+                    value={props.cred.oauth_token_url}
+                    autoComplete="off"
+                    canClear
+                    onChange={handleChangeTokenUrl}
+                />
+            </ControlGroup>
+            <ControlGroup label="Scope" tooltip="Client credential scope (if any)">
+                <Text
+                    value={props.cred.oauth_scope}
+                    autoComplete="off"
+                    canClear
+                    onChange={handleChangeScope}
+                />
+            </ControlGroup>
+        </>
+    );
+}
+
 function GenericCredForm(props) {
     return (
         <>
@@ -224,6 +315,9 @@ function GenericCredForm(props) {
             )}
             {props.type == 'hmac' && (
                 <HMACForm cred={props.cred} setCredential={props.setCredential} />
+            )}
+            {props.type == 'oauth' && (
+                <OAuthForm cred={props.cred} setCredential={props.setCredential} />
             )}
         </>
     );
