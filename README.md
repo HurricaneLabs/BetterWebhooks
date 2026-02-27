@@ -1,5 +1,3 @@
-# Contributing to BetterWebhooks
-
 ## Overview
 
 BetterWebhooks is built in part using the Splunk UI toolkit. The instructions below for building come from that portion of the app.
@@ -14,7 +12,7 @@ For app docs, go [here](https://betterwebhooks.readthedocs.io/).
 
 After this step, the following tasks will be available:
 
--   `start` – Run the `start` task for each project
+-   `start` – Run the `start` task for each project
 -   `build` – Create a production bundle for all projects
 -   `test` – Run unit tests for each project
 -   `lint` – Run JS and CSS linters for each project
@@ -22,6 +20,17 @@ After this step, the following tasks will be available:
     asking, `format:verify` won't.
 
 Running `yarn run setup` once is required to enable all other tasks. The command might take a few minutes to finish.
+
+## Building the SPL
+
+To produce a distributable `BetterWebhooks.spl` file:
+
+```bash
+yarn run package
+```
+
+This runs the full build and packages the output into a `.spl` archive in the project root. This is the file you install
+into Splunk or submit to Splunkbase.
 
 ## Developer Scripts
 
@@ -36,3 +45,24 @@ For more granular control of development scripts, consider using [Lerna](https:/
 
 BetterWebhooks uses [prettier](https://github.com/prettier/prettier) to ensure consistent code formatting. It is recommended
 to [add a prettier plugin to your editor/ide](https://github.com/prettier/prettier#editor-integration).
+
+## Linting and Validation
+
+### Python (ruff)
+
+```bash
+pip install ruff
+ruff check packages/better-webhooks/src/main/resources/splunk/bin/
+```
+
+### Splunk AppInspect
+
+AppInspect validates the app against the same checks Splunk runs during Splunkbase submission. Build the SPL first, then inspect it:
+
+```bash
+yarn run package
+pip install splunk-appinspect
+splunk-appinspect inspect BetterWebhooks.spl --mode precert
+```
+
+Both checks also run automatically in CI on every push and pull request.

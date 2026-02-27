@@ -69,7 +69,7 @@ try {
 
   // Create the archive
   const archiveName = "BetterWebhooks.spl";
-  const tarResult = shell.exec(`tar -czf ${archiveName} BetterWebhooks`);
+  const tarResult = shell.exec(`COPYFILE_DISABLE=1 tar -czf ${archiveName} BetterWebhooks`);
   if (tarResult.code !== 0) {
     throw new Error("Failed to create tar archive");
   }

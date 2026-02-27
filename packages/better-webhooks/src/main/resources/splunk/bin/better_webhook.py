@@ -169,14 +169,21 @@ if __name__ == "__main__":
             hmac_sig_header = credential.get("hmac_sig_header", "").strip()
             hmac_time_header = credential.get("hmac_time_header", "").strip()
 
-            headers = get_hmac_headers(
-                body=body,
-                hmac_secret=hmac_secret,
-                hmac_hash_function=hmac_hash_function,
-                hmac_digest_type=hmac_digest_type,
-                hmac_sig_header=hmac_sig_header,
-                hmac_time_header=hmac_time_header,
-            )
+            try:
+                headers = get_hmac_headers(
+                    body=body,
+                    hmac_secret=hmac_secret,
+                    hmac_hash_function=hmac_hash_function,
+                    hmac_digest_type=hmac_digest_type,
+                    hmac_sig_header=hmac_sig_header,
+                    hmac_time_header=hmac_time_header,
+                )
+            except Exception:
+                logger.error(
+                    "Failed to compute HMAC signature, cannot send webhook. {}",
+                    traceback.format_exc(),
+                )
+                sys.exit(2)
         elif credential["type"] == "oauth":
             auth = None
             oauth_client_id = credential.get("oauth_client_id")

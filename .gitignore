@@ -12,3 +12,6 @@ splunktional-temp
 stage/
 demo/
 *.spl
+appinspect-results.json
+__pycache__/
+*.pyc
