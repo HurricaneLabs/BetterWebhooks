@@ -19,6 +19,7 @@ Release History
 * Fix credentials page not displaying entries when total Splunk credential count exceeds the server-side limit of 100
 * Grant ``sc_admin`` write access in metadata, allowing Splunk Cloud administrators to manage credentials
 * Improve error logging when an HMAC credential is misconfigured with an unknown hash function or digest type
+* Fix credential lookup failing for credentials whose names contain spaces
 
 1.1.8
 -----
