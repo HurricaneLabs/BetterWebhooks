@@ -27,7 +27,7 @@ def get_credential(name: str, session_key: str):
     """
     Grab a specific credential from Splunk's credential store and JSON-decode it
     """
-    url = f"/servicesNS/nobody/BetterWebhooks/storage/passwords/better_webhooks:{quote(name, safe='')}"
+    url = f"/servicesNS/nobody/BetterWebhooks/storage/passwords/{quote(name, safe=':')}"
 
     server_response, server_content = splunk.rest.simpleRequest(
         url, getargs={"output_mode": "json"}, sessionKey=session_key
