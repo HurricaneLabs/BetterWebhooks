@@ -45,8 +45,6 @@ def get_hmac_headers(
         raise ValueError(f"Unknown hash function: {hmac_hash_function}")
 
     secret_bytes = hmac_secret.encode("utf-8")
-    logger.info(hash_func)
-
     hashed = hmac.new(secret_bytes, body, hash_func)
 
     if hmac_digest_type == "b64":
