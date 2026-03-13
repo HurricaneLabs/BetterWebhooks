@@ -27,6 +27,11 @@ def get_credential(name: str, session_key: str):
     """
     Grab a specific credential from Splunk's credential store and JSON-decode it
     """
+    # When invoked via | sendalert, users pass just the credential name (e.g. "my_cred").
+    # When invoked via a saved alert, Splunk passes the full storage/passwords key
+    # (e.g. "better_webhooks:my_cred:"). Normalize to the full key format either way.
+    if not name.startswith("better_webhooks:"):
+        name = f"better_webhooks:{name}:"
     url = f"/servicesNS/nobody/BetterWebhooks/storage/passwords/{quote(name, safe=':')}"
 
     server_response, server_content = splunk.rest.simpleRequest(

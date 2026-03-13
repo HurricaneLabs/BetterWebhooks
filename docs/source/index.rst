@@ -20,6 +20,9 @@ Release History
 * Grant ``sc_admin`` write access in metadata, allowing Splunk Cloud administrators to manage credentials
 * Improve error logging when an HMAC credential is misconfigured with an unknown hash function or digest type
 * Fix credential lookup failing for credentials whose names contain spaces
+* Fix crash on Windows (Splunk on-premises) caused by missing ``win32_setctime`` dependency in vendored loguru
+* Fix credential lookup failing when using ``| sendalert`` in SPL (credential name was not being resolved to the correct storage key)
+* Document ``| sendalert`` usage in the alert action documentation
 
 1.1.8
 -----
