@@ -9,6 +9,21 @@ POST body.
 Release History
 ----------------
 
+1.2.1
+-----
+* Fix credential lookup URL to include realm prefix, resolving failures on Splunk Cloud (thanks rsrdesarrollo)
+* Add OAuth client credentials support (thanks ivohechmann)
+* Log webhook response body at INFO level on success, making it visible without debug logging
+* Log webhook response body on error responses (thanks plup)
+* Document required Splunk capabilities for managing credentials
+* Fix credentials page not displaying entries when total Splunk credential count exceeds the server-side limit of 100
+* Grant ``sc_admin`` write access in metadata, allowing Splunk Cloud administrators to manage credentials
+* Improve error logging when an HMAC credential is misconfigured with an unknown hash function or digest type
+* Fix credential lookup failing for credentials whose names contain spaces
+* Fix crash on Windows (Splunk on-premises) caused by missing ``win32_setctime`` dependency in vendored loguru
+* Fix credential lookup failing when using ``| sendalert`` in SPL (credential name was not being resolved to the correct storage key)
+* Document ``| sendalert`` usage in the alert action documentation
+
 1.1.8
 -----
 * Add support for sending empty POST bodies by using the ``$none$`` token in the body format field. When this token is used, no Content-Type header is sent with the request.

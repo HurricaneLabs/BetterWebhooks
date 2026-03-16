@@ -11,11 +11,28 @@ If you want to pass credentials with your webhooks, you'll need to store them fi
 by navigating to the app's "Credentials" page. Click "New credential" to add one.
 All credentials are encrypted at rest by utilizing Splunk's credential store. 
 
-Once a credential is added, it will be available as an option when you add the 
-"Better Webhook" alert action to an alert. 
+Once a credential is added, it will be available as an option when you add the
+"Better Webhook" alert action to an alert.
 
 
-To use Lumache, first install it using pip:
+Required Permissions
+---------------------
+
+Managing credentials requires access to Splunk's credential store. The following
+Splunk capabilities are needed:
+
+* ``list_storage_passwords`` — required to read and list credentials
+* ``admin_all_objects`` — required to create, update, and delete credentials
+
+By default, the ``admin`` role has both of these capabilities. The ``power`` role
+does **not**, and cannot manage credentials without them being explicitly granted.
+
+On **Splunk Cloud**, these capabilities are typically only available to the
+``sc_admin`` role. This is a Splunk platform constraint — it is not possible to
+grant these capabilities to standard users without involvement from Splunk Cloud
+support. If your users need to manage credentials and do not have ``sc_admin``,
+you will need to work with Splunk to create a custom role with the appropriate
+capabilities.
 
 Types of credentials
 ---------------------

@@ -40,7 +40,7 @@ If your webhook receiver expected the Splunk results to be in a property called
 .. code-block:: 
 
    {
-      "title": $$search_name,
+      "title": $$search_name$$,
       "details": $$full_result$$
    }
 
@@ -63,6 +63,23 @@ The following tokens are available for use in the POST body format:
 * ``$$results_link$$`` - A link to the search results
 * ``$$full_result$$`` - The complete search results
 * ``$$none$$`` - Special token that sends an empty POST body with no Content-Type header
+
+Using sendalert in SPL
+-----------------------
+
+The alert action can be triggered directly from SPL using the ``| sendalert`` command:
+
+.. code-block::
+
+   index=my_index
+   | sendalert better_webhook
+       param.url="https://hooks.example.com/webhook"
+       param.credential="my_credential_name"
+       param.body_format="$$none$$"
+
+Pass ``param.credential`` as the credential **name** as it appears on the credentials page —
+not the full internal storage key. ``param.body_format`` accepts the same tokens listed above
+and behaves identically to the GUI field.
 
 Adaptive response (Enterprise Security)
 ----------------------------------------

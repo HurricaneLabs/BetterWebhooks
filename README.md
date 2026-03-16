@@ -1,5 +1,3 @@
-# Contributing to BetterWebhooks
-
 ## Overview
 
 BetterWebhooks is built in part using the Splunk UI toolkit. The instructions below for building come from that portion of the app.
@@ -14,7 +12,7 @@ For app docs, go [here](https://betterwebhooks.readthedocs.io/).
 
 After this step, the following tasks will be available:
 
--   `start` – Run the `start` task for each project
+-   `start` – Run the `start` task for each project
 -   `build` – Create a production bundle for all projects
 -   `test` – Run unit tests for each project
 -   `lint` – Run JS and CSS linters for each project
@@ -23,16 +21,34 @@ After this step, the following tasks will be available:
 
 Running `yarn run setup` once is required to enable all other tasks. The command might take a few minutes to finish.
 
-## Developer Scripts
+## Building the SPL
 
-Commands run from the root directory will be applied to all packages. This is handy when working on multiple packages
-simultaneously. Commands can also be run from individual packages. This may be better for performance and reporting when
-only working on a single package. All of the packages have similar developer scripts, but not all scripts are implemented
-for every package. See the `package.json` of the package in question to see which scripts are available there.
+To produce a distributable `BetterWebhooks.spl` file:
 
-For more granular control of development scripts, consider using [Lerna](https://github.com/lerna/lerna) directly.
+```bash
+yarn run package
+```
 
-## Code Formatting
+This runs the full build and packages the output into a `.spl` archive in the project root. This is the file you install
+into Splunk or submit to Splunkbase.
 
-BetterWebhooks uses [prettier](https://github.com/prettier/prettier) to ensure consistent code formatting. It is recommended
-to [add a prettier plugin to your editor/ide](https://github.com/prettier/prettier#editor-integration).
+## Linting and Validation
+
+### Python (ruff)
+
+```bash
+pip install ruff
+ruff check packages/better-webhooks/src/main/resources/splunk/bin/
+```
+
+### Splunk AppInspect
+
+AppInspect validates the app against the same checks Splunk runs during Splunkbase submission. Build the SPL first, then inspect it:
+
+```bash
+yarn run package
+pip install splunk-appinspect
+splunk-appinspect inspect BetterWebhooks.spl --mode precert
+```
+
+Both checks also run automatically in CI on every push and pull request.

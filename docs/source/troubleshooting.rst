@@ -19,5 +19,9 @@ NOTE: The above should work fine for find whether or not an error occurred, but
 tracebacks are multiline and will be excluded. If you're investigating a specific
 error I would use the first search so that no log events are missed.
 
+The alert action logs the response body from the webhook receiver at INFO level,
+so it will appear in the standard search above without requiring any log level changes.
+This is useful for capturing response data such as ticket numbers from systems like Jira.
+
 If the log level for the "sendmodalert" alert channel is DEBUG, the alert action
-will also log the POST body and the response body. 
+will additionally log the full POST body sent with the request.

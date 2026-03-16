@@ -1,0 +1,4 @@
+[lint]
+# E402: module-level import not at top of file
+# Splunk bin scripts use sys.path.insert() after initial imports, which is unavoidable.
+ignore = ["E402"]

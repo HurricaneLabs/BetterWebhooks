@@ -19,7 +19,7 @@ export async function getCredentials() {
     const passwordsEndpoint = '/en-US/splunkd/__raw/servicesNS/nobody/-/storage/passwords';
 
     try {
-        const resp = await fetch(`${passwordsEndpoint}?output_mode=json&count=0`, {
+        const resp = await fetch(`${passwordsEndpoint}?output_mode=json&count=0&search=realm%3D%22better_webhooks%22`, {
             ...getDefaultFetchInit(),
             method: 'GET',
         });

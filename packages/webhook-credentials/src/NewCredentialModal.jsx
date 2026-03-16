@@ -33,6 +33,10 @@ function NewCredentialModal(props) {
         hmac_digest_type: 'b64',
         hmac_sig_header: '',
         hmac_time_header: '',
+        oauth_client_id: '',
+        oauth_client_secret: '',
+        oauth_token_url: '',
+        oauth_scope: '',
     });
     const [advanced, setAdvanced] = useState(false);
     const [apps, setApps] = useState([]);
@@ -111,6 +115,7 @@ function NewCredentialModal(props) {
                                 <Select.Option label="HTTP Basic Auth" value="basic" />
                                 <Select.Option label="Custom HTTP Header" value="header" />
                                 <Select.Option label="HMAC Secret" value="hmac" />
+                                <Select.Option label="OAuth Client Credential" value="oauth" />
                             </Select>
                         </ControlGroup>
                         <ControlGroup label="Name">

@@ -3,7 +3,7 @@ import os
 import time
 import hashlib
 import hmac
-from base64 import b64decode
+from base64 import b64encode
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "lib"))
 
@@ -39,17 +39,20 @@ def get_hmac_headers(
         body += timestamp.encode()
 
 
-    from base64 import b64encode
-    secret_bytes = hmac_secret.encode("utf-8")
-    logger.info(HASH_FUNCTION_MAP.get(hmac_hash_function))
+    hash_func = HASH_FUNCTION_MAP.get(hmac_hash_function)
+    if hash_func is None:
+        logger.error("Unknown HMAC hash function: {}", hmac_hash_function)
+        raise ValueError(f"Unknown hash function: {hmac_hash_function}")
 
-    hashed = hmac.new(secret_bytes, body, HASH_FUNCTION_MAP.get(hmac_hash_function))
+    secret_bytes = hmac_secret.encode("utf-8")
+    hashed = hmac.new(secret_bytes, body, hash_func)
 
     if hmac_digest_type == "b64":
         digest = b64encode(hashed.digest())
     elif hmac_digest_type == "hex":
         digest = hashed.hexdigest()
     else:
+        logger.error("Unknown HMAC digest type: {}", hmac_digest_type)
         raise ValueError(f"Unknown digest type: {hmac_digest_type}")
 
     headers[hmac_sig_header] = digest
