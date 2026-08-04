@@ -4,6 +4,7 @@ Lovingly adapted from the original "alert_webhook" app which ships with Splunk.
 
 import json
 import os
+import re
 import sys
 import traceback
 from typing import Union
@@ -59,6 +60,7 @@ def send_webhook_request(
     auth: Union[tuple, None],
     user_agent: str,
     proxy: str,
+    body_failure_regex: str = "",
 ):
     """
     Send the webhook and attempt to log as much information as possible if it fails.
@@ -91,6 +93,30 @@ def send_webhook_request(
 
         if 200 <= r.status_code < 300:
             logger.info("Webhook receiver responded with HTTP status={}, response body={}", r.status_code, r.text)
+
+            # Some receivers report failures in the body of an otherwise
+            # successful HTTP response (e.g. the Slack Web API answers HTTP 200
+            # with {"ok": false, "error": "..."}). An optional user-supplied
+            # pattern matched against the body of a 2xx response covers any such
+            # convention, JSON or not. A match fails the delivery; an invalid
+            # pattern is logged but never fails an otherwise good one.
+            if body_failure_regex:
+                try:
+                    if re.search(body_failure_regex, r.text):
+                        logger.error(
+                            "Webhook receiver responded with HTTP status={} but the response body matched the failure pattern {}, response body={}",
+                            r.status_code,
+                            body_failure_regex,
+                            r.text,
+                        )
+                        return False
+                except re.error as exc:
+                    logger.error(
+                        "Invalid failure pattern {} configured on the alert action, ignoring it: {}",
+                        body_failure_regex,
+                        exc,
+                    )
+
             return True
         else:
             logger.error("Webhook receiver responded with HTTP status={}, response body={}", r.status_code, r.text)
@@ -214,8 +240,17 @@ if __name__ == "__main__":
             sys.exit(2)
 
         user_agent = settings["configuration"].get("user_agent", "Splunk")
+        body_failure_regex = (
+            settings["configuration"].get("body_failure_regex") or ""
+        ).strip()
         if not send_webhook_request(
-            url, body, headers, auth, user_agent=user_agent, proxy=proxy
+            url,
+            body,
+            headers,
+            auth,
+            user_agent=user_agent,
+            proxy=proxy,
+            body_failure_regex=body_failure_regex,
         ):
             sys.exit(2)
     except Exception:

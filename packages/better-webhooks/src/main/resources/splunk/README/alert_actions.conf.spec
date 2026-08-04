@@ -11,3 +11,12 @@ param.body_format = <string>
 
 param.credential = <string>
 * The saved credential to use.
+
+param.body_failure_regex = <string>
+* Optional regular expression matched against the response body of a 2xx
+  response. A match is treated as a failed delivery.
+* Use this for receivers that report errors in the response body of an
+  otherwise successful HTTP response, e.g. "ok":\s*false for the Slack Web
+  API or "status":\s*"error".
+* An invalid pattern is logged and ignored; it never fails a delivery.
+* Defaults to empty (disabled).

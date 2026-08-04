@@ -55,6 +55,32 @@
         </div>
     </div>
     <div class="control-group">
+        <label class="control-label" for="body_failure_regex">Failure Pattern</label>
+
+        <div class="controls">
+            <input
+                type="text"
+                class="input-xlarge"
+                name="action.better_webhook.param.body_failure_regex"
+                id="body_failure_regex"
+                placeholder='"status":\s*"error"'
+            />
+        </div>
+    </div>
+    <div class="control-group">
+        <div class="controls">
+            <span
+                class="help-block"
+                style="display: block; position: static; width: auto; margin-left: 0"
+            >
+                Optional regular expression. If it matches the response body of an
+                otherwise successful delivery, the delivery is treated as failed. Useful
+                for receivers that report errors in the body of an HTTP 200 response.
+                Leave empty to rely on the HTTP status alone.
+            </span>
+        </div>
+    </div>
+    <div class="control-group">
         <label class="control-label" for="better_webhook.credential">Credential</label>
         <div class="controls">
         <splunk-search-dropdown
