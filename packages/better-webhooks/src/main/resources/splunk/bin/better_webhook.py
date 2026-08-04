@@ -91,6 +91,28 @@ def send_webhook_request(
 
         if 200 <= r.status_code < 300:
             logger.info("Webhook receiver responded with HTTP status={}, response body={}", r.status_code, r.text)
+
+            # Some receivers report failures in the body rather than the status code.
+            # Slack's Web API answers HTTP 200 for application-level errors and
+            # signals them with {"ok": false, "error": "..."}. Only an explicit false
+            # counts as a failure: a missing or non-boolean "ok" means the receiver
+            # has expressed no opinion, so the status code stands. Bodies that aren't
+            # JSON at all (Slack incoming webhooks reply with the bare string "ok")
+            # are unaffected.
+            try:
+                parsed = json.loads(r.text)
+            except ValueError:
+                parsed = None
+
+            if isinstance(parsed, dict) and parsed.get("ok") is False:
+                logger.error(
+                    "Webhook receiver responded with HTTP status={} but reported failure in the response body, error={}, response body={}",
+                    r.status_code,
+                    parsed.get("error"),
+                    r.text,
+                )
+                return False
+
             return True
         else:
             logger.error("Webhook receiver responded with HTTP status={}, response body={}", r.status_code, r.text)
