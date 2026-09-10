@@ -240,9 +240,12 @@ if __name__ == "__main__":
             sys.exit(2)
 
         user_agent = settings["configuration"].get("user_agent", "Splunk")
-        body_failure_regex = (
-            settings["configuration"].get("body_failure_regex") or ""
-        ).strip()
+        # Keep the pattern verbatim — stripping would break regexes with
+        # significant leading/trailing whitespace. Only whitespace-only
+        # input is treated as unset.
+        body_failure_regex = settings["configuration"].get("body_failure_regex") or ""
+        if not body_failure_regex.strip():
+            body_failure_regex = ""
         if not send_webhook_request(
             url,
             body,
