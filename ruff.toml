@@ -1,4 +1,9 @@
 [lint]
+# Pin the rule set explicitly. Ruff's defaults widened in 0.16.x and started
+# failing CI on pre-existing code; this is ruff's older default set, which is
+# what CI actually enforced. Widening it is a deliberate, separate decision.
+select = ["E4", "E7", "E9", "F"]
+
 # E402: module-level import not at top of file
 # Splunk bin scripts use sys.path.insert() after initial imports, which is unavoidable.
 ignore = ["E402"]

@@ -37,7 +37,7 @@ into Splunk or submit to Splunkbase.
 ### Python (ruff)
 
 ```bash
-pip install ruff
+pip install ruff==0.16.7  # keep in sync with .github/workflows/ci.yml
 ruff check packages/better-webhooks/src/main/resources/splunk/bin/
 ```
 
