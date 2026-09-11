@@ -15,3 +15,4 @@ demo/
 appinspect-results.json
 __pycache__/
 *.pyc
+docs/tstrawbridge
