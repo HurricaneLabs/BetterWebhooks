@@ -10,6 +10,12 @@ getUserTheme()
     .then((theme) => {
         // react-page defaults to enterprise/comfortable; getThemeOptions is Splunk's
         // own mapping, so pass family and density explicitly instead.
+        //
+        // Passing themeFamily also makes prisma reachable for the first time, and our
+        // styles still use enterprise-era tokens (spacing, spacingHalf, backgroundColor,
+        // infoColor) that resolve to undefined under prisma. Not live today: core bounds
+        // getUserTheme() by app.conf [ui] supported_themes, and we declare light,dark.
+        // Migrate those tokens to pick({enterprise, prisma}) before that ever changes.
         const { family, colorScheme, density } = getThemeOptions(theme);
         layout(
             <StyledContainer>
