@@ -103,10 +103,7 @@ function NewCredentialModal(props) {
                 style={{ width: '600px' }}
             >
                 <form onSubmit={handleSubmit}>
-                    <Modal.Header
-                        title="New credential"
-                        icon={<Layout width={20} height={20} />}
-                    />
+                    <Modal.Header title="New credential" icon={<Layout {...iconProps} />} />
 
                     <Modal.Body>
                         <ControlGroup label="Credential type">
