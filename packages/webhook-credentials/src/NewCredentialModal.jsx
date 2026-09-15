@@ -51,10 +51,10 @@ function NewCredentialModal(props) {
         setError(null);
     };
 
-    const handleRequestClickAway = ({ reason }) => {
-        if (reason === 'escapeKey') {
-            setOpen(false);
-            setError(null);
+    // react-ui 5 draws the X button in Modal.Header but reports the click here.
+    const handleModalRequestClose = ({ reason }) => {
+        if (reason === 'escapeKey' || reason === 'clickCloseButton') {
+            handleRequestClose();
         }
     };
 
@@ -97,16 +97,15 @@ function NewCredentialModal(props) {
                 label="New Credential"
             />
             <Modal
-                onRequestClose={handleRequestClickAway}
+                onRequestClose={handleModalRequestClose}
                 open={open}
                 returnFocus={modalToggle}
                 style={{ width: '600px' }}
             >
                 <form onSubmit={handleSubmit}>
                     <Modal.Header
-                        onRequestClose={handleRequestClose}
                         title="New credential"
-                        icon={<Layout width="100%" height="100%" />}
+                        icon={<Layout width={20} height={20} />}
                     />
 
                     <Modal.Body>

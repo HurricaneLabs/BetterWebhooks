@@ -2,11 +2,8 @@ import '@testing-library/jest-dom';
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 
-// WebhookCredentials.jsx calls getUserTheme() at module load and getCredentials()
-// on mount; both must be mocked so the component renders in jsdom.
-jest.mock('@splunk/splunk-utils/themes', () => ({
-    getUserTheme: () => Promise.resolve('enterprise'),
-}));
+// WebhookCredentials.jsx calls getCredentials() on mount; it must be mocked so the
+// component renders in jsdom.
 jest.mock('./http_utils', () => ({
     getCredentials: () => Promise.resolve({ entry: [] }),
     getApps: () => Promise.resolve([]),
