@@ -13,7 +13,8 @@ getUserTheme()
         //
         // Passing themeFamily also makes prisma reachable for the first time, and our
         // styles still use enterprise-era tokens (spacing, spacingHalf, backgroundColor,
-        // infoColor) that resolve to undefined under prisma. Not live today: core bounds
+        // plus infoColor via the currently-unrendered StyledGreeting) that resolve to
+        // undefined under prisma. Not live today: core is documented to bound
         // getUserTheme() by app.conf [ui] supported_themes, and we declare light,dark.
         // Migrate those tokens to pick({enterprise, prisma}) before that ever changes.
         const { family, colorScheme, density } = getThemeOptions(theme);
