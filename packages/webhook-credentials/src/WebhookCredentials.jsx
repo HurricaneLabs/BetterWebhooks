@@ -15,13 +15,6 @@ import {
     DescriptionText,
 } from './WebhookCredentialsStyles';
 import { getCredentials } from './http_utils';
-import { getUserTheme } from '@splunk/splunk-utils/themes';
-
-getUserTheme().then((mode) => {
-    if (mode == 'dark') {
-        document.body.style.backgroundColor = '#171d21';
-    }
-});
 
 const propTypes = {
     name: PropTypes.string,
