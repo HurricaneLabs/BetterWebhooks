@@ -9,6 +9,12 @@ POST body.
 Release History
 ----------------
 
+1.3.0
+-----
+* Run the alert action on Python 3.13 (``python.required = 3.13``) for Splunk Cloud 10.7 and Splunk Enterprise 10.2+. Older Splunk versions keep using their default Python 3.
+* Add an optional response-body pattern that marks a delivery as failed when the webhook response matches it (thanks amaechler)
+* Document resolving certificate verification errors in the troubleshooting guide
+
 1.2.1
 -----
 * Fix credential lookup URL to include realm prefix, resolving failures on Splunk Cloud (thanks rsrdesarrollo)
