@@ -17,7 +17,7 @@ CI (`.github/workflows/`): `ci.yml` runs ruff + AppInspect on every push/PR; `bu
 
 ## Architecture
 
-- Lerna / Yarn-workspaces monorepo with two packages; Node >= 14, React 16, `@splunk/react-ui` 4.x on `main`. NOTE: remote branch `wip/react-ui-5-migration` (unmerged, newer than `main`) is migrating the UI stack.
+- Lerna / Yarn-workspaces monorepo with two packages; Node >= 14, React 16, `@splunk/react-ui` 5.11, `@splunk/themes` 1.8.
 - `packages/better-webhooks` is the Splunk app itself: the app payload lives under `src/main/resources/splunk/` (Python alert action in `bin/`, `.conf` files in `default/`, vendored `loguru` in `lib/`), and a React credentials page under `src/main/webapp/pages/credentials/` is webpack-built into it.
 - `packages/webhook-credentials` is a reusable React component library (`WebhookCredentials.jsx` + modals) consumed by the app's credentials page; it holds the jest tests.
 - Backend flow: `bin/better_webhook.py` runs as the alert action, pulls JSON-encoded credentials from Splunk `storage/passwords` (realm `better_webhooks:<name>:`), builds auth headers via `hmac_helper.py` / `oauth_helper.py`, and POSTs the payload with `requests` (optional proxy).
