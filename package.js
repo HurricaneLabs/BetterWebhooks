@@ -23,6 +23,14 @@ console.log(`Platform: ${process.platform}`);
 console.log(`Root directory: ${rootDir}`);
 
 try {
+  // Step 0: Start from an empty stage. The build copies into stage/ without
+  // clearing it, so files from an earlier build (e.g. __pycache__) would ship.
+  const staleStage = path.join(rootDir, "packages", "better-webhooks", "stage");
+  if (shell.test("-d", staleStage)) {
+    console.log(`Step 0: Removing stale ${staleStage}...`);
+    shell.rm("-rf", staleStage);
+  }
+
   // Step 1: Run yarn setup
   console.log("Step 1: Running yarn setup...");
   const setupResult = shell.exec("yarn run setup");
