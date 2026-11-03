@@ -9,11 +9,13 @@ on:
 permissions:
   contents: read
 
-# A new push cancels the older run for the same branch. Runs on main are never
-# cancelled, so every main commit keeps its result.
+# A new push cancels the older run for the same branch. Each main run gets a
+# group of its own (its run id): GitHub keeps only one pending run per group and
+# replaces it when another arrives, so a shared main group would drop a commit's
+# run when pushes queue up.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+  group: ${{ github.workflow }}-${{ github.ref == 'refs/heads/main' && github.run_id || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   ruff:

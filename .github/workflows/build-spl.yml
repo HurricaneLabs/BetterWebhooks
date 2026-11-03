@@ -14,11 +14,11 @@ on:
 permissions:
   contents: read
 
-# Same as ci.yml, and a release run is never cancelled either, so its upload
-# always finishes.
+# Same as ci.yml, and each release run also gets a group of its own, so a
+# release upload is never cancelled or replaced.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.event_name != 'release' }}
+  group: ${{ github.workflow }}-${{ (github.ref == 'refs/heads/main' || github.event_name == 'release') && github.run_id || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
