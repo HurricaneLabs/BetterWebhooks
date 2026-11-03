@@ -26,6 +26,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.2.0",
+    "@react-spring/web": "^9.7.5",
     "@splunk/babel-preset": "^4.0.0",
     "@splunk/eslint-config": "^4.0.0",
     "@splunk/splunk-utils": "^3.4.0",
