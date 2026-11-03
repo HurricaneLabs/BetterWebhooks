@@ -3,9 +3,9 @@
 Alert Action
 =============
 
-The "Better Webhook" alert action has only 3 parameters: The URL that the webhook
-will POST to, an optional credential (see :doc:`credentials`), and the POST body
-format. 
+The "Better Webhook" alert action has 4 parameters: The URL that the webhook
+will POST to, an optional credential (see :doc:`credentials`), the POST body
+format, and an optional failure pattern.
 
 Body Format
 ------------
@@ -63,6 +63,22 @@ The following tokens are available for use in the POST body format:
 * ``$$results_link$$`` - A link to the search results
 * ``$$full_result$$`` - The complete search results
 * ``$$none$$`` - Special token that sends an empty POST body with no Content-Type header
+
+Failure Pattern
+----------------
+
+Some receivers answer with HTTP 200 even when they rejected the message, and put
+the error in the response body instead, like the Slack Web API's ``"ok": false``.
+Set **Failure Pattern** to a regular expression, and a 2xx response whose body
+matches it is logged as a failed delivery. For example:
+
+* ``"ok":\s*false`` for the Slack Web API
+* ``"status":\s*"error"`` for receivers that report a status field
+
+The pattern is checked only on 2xx responses; any other status already fails the
+delivery. Leave it empty to turn the check off. An invalid pattern is logged and
+ignored, so it never fails a delivery on its own. In SPL, the parameter is
+``param.body_failure_regex``.
 
 Using sendalert in SPL
 -----------------------
