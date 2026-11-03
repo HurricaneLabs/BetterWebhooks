@@ -51,6 +51,7 @@ AppInspect validates the app against the same checks Splunk runs during Splunkba
 yarn run package
 pip install splunk-appinspect==4.4.0  # keep in sync with .github/workflows/ci.yml
 splunk-appinspect inspect BetterWebhooks.spl --mode precert --ci  # exit 0 or 103 (warnings) is a pass
+splunk-appinspect inspect BetterWebhooks.spl --mode precert --ci --included-tags cloud  # Splunk Cloud checks
 ```
 
 Both checks also run automatically in CI on every push and pull request.

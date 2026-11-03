@@ -74,36 +74,45 @@ jobs:
       - name: Install AppInspect
         run: pip install splunk-appinspect==4.4.0
 
-      # --ci sets the exit code from the report: 101 failures, 104 future-tag
-      # warnings, 103 warnings, in that priority. Plain warnings (103) are
-      # already on main, so they pass; failures and future failures fail.
-      # --ci has no code for a check that errors out, so the summary is checked
-      # too (jq -e also fails if the report is missing).
+      # Two runs: precert (Splunkbase) and precert with the cloud tags (Splunk
+      # Cloud vetting). --ci sets each exit code from its report: 101 failures,
+      # 104 future-tag warnings, 103 warnings, in that priority. Plain warnings
+      # (103) are already on main, so they pass; failures and future failures
+      # fail. --ci has no code for a check that errors out, so each summary is
+      # checked too (jq -e also fails if the report is missing).
       - name: Run AppInspect
         shell: bash
         run: |
-          rc=0
-          splunk-appinspect inspect BetterWebhooks.spl --mode precert --ci \
-            --data-format json --output-file appinspect-results.json || rc=$?
-          jq -c '.summary' appinspect-results.json || true
-          jq -r '.reports[].groups[].checks[]
-            | select(.result | IN("success", "not_applicable", "skipped") | not)
-            | "\(.result)\t\(.name)"' appinspect-results.json | sort || true
-          case "$rc" in
-            0|103) ;;
-            *) echo "::error::AppInspect failed (exit $rc)"; exit "$rc" ;;
-          esac
-          if ! jq -e '.summary | .failure == 0 and .error == 0 and .future_failure == 0' \
-              appinspect-results.json >/dev/null; then
-            echo "::error::AppInspect report has errors or failures, or is missing"
-            exit 1
-          fi
-          echo "AppInspect passed (exit $rc)"
+          gate() {
+            local label=$1 out="appinspect-$1.json" rc=0
+            shift
+            splunk-appinspect inspect BetterWebhooks.spl --mode precert --ci "$@" \
+              --data-format json --output-file "$out" || rc=$?
+            echo "== AppInspect $label (exit $rc)"
+            jq -c '.summary' "$out" || true
+            jq -r '.reports[].groups[].checks[]
+              | select(.result | IN("success", "not_applicable", "skipped") | not)
+              | "\(.result)\t\(.name)"' "$out" | sort || true
+            case "$rc" in
+              0|103) ;;
+              *) echo "::error::AppInspect $label failed (exit $rc)"; return 1 ;;
+            esac
+            if ! jq -e '.summary | .failure == 0 and .error == 0 and .future_failure == 0' \
+                "$out" >/dev/null; then
+              echo "::error::AppInspect $label report has errors or failures, or is missing"
+              return 1
+            fi
+            echo "AppInspect $label passed (exit $rc)"
+          }
+          failed=0
+          gate precert || failed=1
+          gate cloud --included-tags cloud || failed=1
+          exit "$failed"
 
       - name: Upload AppInspect results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: appinspect-results
-          path: appinspect-results.json
+          path: appinspect-*.json
           retention-days: 7

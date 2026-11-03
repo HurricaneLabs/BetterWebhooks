@@ -12,7 +12,7 @@ splunktional-temp
 stage/
 demo/
 *.spl
-appinspect-results.json
+appinspect-*.json
 __pycache__/
 *.pyc
 docs/tstrawbridge
