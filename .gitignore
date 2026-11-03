@@ -16,3 +16,6 @@ appinspect-results.json
 __pycache__/
 *.pyc
 docs/tstrawbridge
+
+# yarn owns dependencies here; an npm lockfile is always a stray
+package-lock.json
