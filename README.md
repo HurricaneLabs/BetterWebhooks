@@ -7,8 +7,10 @@ For app docs, go [here](https://betterwebhooks.readthedocs.io/).
 ## Getting Started
 
 1. Clone the repo.
-2. Install yarn (>= 1.2) if you haven't already: `npm install --global yarn`.
-3. Run the setup task: `yarn run setup`.
+2. Use Node 18. `.node-version` pins it: fnm picks it up with `fnm use`, and with nvm run `nvm use 18`.
+   `yarn run setup` is known to fail on Node 24, and Node 20 and 22 are untested, so `engines` allows 18 only.
+3. Install yarn (>= 1.2) if you haven't already: `npm install --global yarn`.
+4. Run the setup task: `yarn run setup`.
 
 After this step, the following tasks will be available:
 
