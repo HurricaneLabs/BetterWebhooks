@@ -8,6 +8,12 @@ on:
   release:
     types: [ created ]
 
+# Same as ci.yml, and a release run is never cancelled either, so its upload
+# always finishes.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.event_name != 'release' }}
+
 jobs:
   build:
     runs-on: ubuntu-latest
