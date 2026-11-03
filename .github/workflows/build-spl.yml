@@ -6,7 +6,19 @@ on:
   pull_request:
     branches: [ main ]
   release:
-    types: [ created ]
+    # published, not created: created never fires for a draft, and publishing
+    # a draft later fires only published.
+    types: [ published ]
+
+# Read-only by default; only the release job can write (to attach the .spl).
+permissions:
+  contents: read
+
+# Same as ci.yml, and each release run also gets a group of its own, so a
+# release upload is never cancelled or replaced.
+concurrency:
+  group: ${{ github.workflow }}-${{ (github.ref == 'refs/heads/main' || github.event_name == 'release') && github.run_id || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -14,12 +26,12 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Setup Node.js
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v4
       with:
-        node-version: '18.x'
+        node-version-file: .node-version
         cache: 'yarn'
 
     - name: Install dependencies
@@ -42,34 +54,22 @@ jobs:
         echo "Archive contents:"
         tar -tzf BetterWebhooks.spl | head -20
 
-  # Job to create a release artifact (only on release events)
+  # Attach the build job's .spl to the release (only on release events).
   release:
     if: github.event_name == 'release'
     needs: build
     runs-on: ubuntu-latest
-    
+    permissions:
+      contents: write
+
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
-
-    - name: Setup Node.js
-      uses: actions/setup-node@v3
+    - name: Download BetterWebhooks.spl from the build job
+      uses: actions/download-artifact@v4
       with:
-        node-version: '18.x'
-        cache: 'yarn'
+        name: BetterWebhooks-spl
 
-    - name: Install dependencies
-      run: yarn install --frozen-lockfile
-
-    - name: Build BetterWebhooks.spl
-      run: yarn run package
-
-    - name: Upload Release Asset
-      uses: actions/upload-release-asset@v1
+    - name: Attach BetterWebhooks.spl to the release
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ github.event.release.upload_url }}
-        asset_path: ./BetterWebhooks.spl
-        asset_name: BetterWebhooks.spl
-        asset_content_type: application/gzip
+        GH_TOKEN: ${{ github.token }}
+        TAG: ${{ github.event.release.tag_name }}
+      run: gh release upload "$TAG" BetterWebhooks.spl --repo "$GITHUB_REPOSITORY" --clobber

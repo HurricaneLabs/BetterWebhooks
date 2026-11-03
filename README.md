@@ -7,8 +7,10 @@ For app docs, go [here](https://betterwebhooks.readthedocs.io/).
 ## Getting Started
 
 1. Clone the repo.
-2. Install yarn (>= 1.2) if you haven't already: `npm install --global yarn`.
-3. Run the setup task: `yarn run setup`.
+2. Use Node 18. `.node-version` pins it: fnm picks it up with `fnm use`, and with nvm run `nvm use 18`.
+   `yarn run setup` is known to fail on Node 24, and Node 20 and 22 are untested, so `engines` allows 18 only.
+3. Install yarn (>= 1.2) if you haven't already: `npm install --global yarn`.
+4. Run the setup task: `yarn run setup`.
 
 After this step, the following tasks will be available:
 
@@ -47,8 +49,9 @@ AppInspect validates the app against the same checks Splunk runs during Splunkba
 
 ```bash
 yarn run package
-pip install splunk-appinspect
-splunk-appinspect inspect BetterWebhooks.spl --mode precert
+pip install splunk-appinspect==4.4.0  # keep in sync with .github/workflows/ci.yml
+splunk-appinspect inspect BetterWebhooks.spl --mode precert --ci  # exit 0 or 103 (warnings) is a pass
+splunk-appinspect inspect BetterWebhooks.spl --mode precert --ci --included-tags cloud  # Splunk Cloud checks
 ```
 
 Both checks also run automatically in CI on every push and pull request.

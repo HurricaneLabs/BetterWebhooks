@@ -25,6 +25,10 @@ module.exports = webpackMerge(baseConfig, {
                 {
                     from: path.join(__dirname, 'src/main/resources/splunk'),
                     to: path.join(__dirname, 'stage'),
+                    // Compiled Python from local runs is a Splunkbase hard reject (#30).
+                    globOptions: {
+                        ignore: ['**/__pycache__/**', '**/*.pyc', '**/*.pyo'],
+                    },
                 },
             ],
         }),

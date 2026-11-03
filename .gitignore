@@ -12,7 +12,10 @@ splunktional-temp
 stage/
 demo/
 *.spl
-appinspect-results.json
+appinspect-*.json
 __pycache__/
 *.pyc
 docs/tstrawbridge
+
+# yarn owns dependencies here; an npm lockfile is always a stray
+package-lock.json

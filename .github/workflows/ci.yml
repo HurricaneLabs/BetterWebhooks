@@ -9,6 +9,14 @@ on:
 permissions:
   contents: read
 
+# A new push cancels the older run for the same branch. Each main run gets a
+# group of its own (its run id): GitHub keeps only one pending run per group and
+# replaces it when another arrives, so a shared main group would drop a commit's
+# run when pushes queue up.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref == 'refs/heads/main' && github.run_id || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   ruff:
     name: Python lint (ruff)
@@ -33,7 +41,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "18.x"
+          node-version-file: .node-version
           cache: "yarn"
 
       - name: Install dependencies
@@ -50,7 +58,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "18.x"
+          node-version-file: .node-version
           cache: "yarn"
 
       - name: Install dependencies
@@ -63,16 +71,50 @@ jobs:
         with:
           python-version: "3.13"
 
+      # Pinned so a new AppInspect release can't change CI's verdict on its own.
+      # Bump it deliberately; keep in sync with README.md.
       - name: Install AppInspect
-        run: pip install splunk-appinspect
+        run: pip install splunk-appinspect==4.4.0
 
+      # Two runs: precert (Splunkbase) and precert with the cloud tags (Splunk
+      # Cloud vetting). --ci sets each exit code from its report: 101 failures,
+      # 104 future-tag warnings, 103 warnings, in that priority. Plain warnings
+      # (103) are already on main, so they pass; failures and future failures
+      # fail. --ci has no code for a check that errors out, so each summary is
+      # checked too (jq -e also fails if the report is missing).
       - name: Run AppInspect
-        run: splunk-appinspect inspect BetterWebhooks.spl --mode precert --data-format json | tee appinspect-results.json
+        shell: bash
+        run: |
+          gate() {
+            local label=$1 out="appinspect-$1.json" rc=0
+            shift
+            splunk-appinspect inspect BetterWebhooks.spl --mode precert --ci "$@" \
+              --data-format json --output-file "$out" || rc=$?
+            echo "== AppInspect $label (exit $rc)"
+            jq -c '.summary' "$out" || true
+            jq -r '.reports[].groups[].checks[]
+              | select(.result | IN("success", "not_applicable", "skipped") | not)
+              | "\(.result)\t\(.name)"' "$out" | sort || true
+            case "$rc" in
+              0|103) ;;
+              *) echo "::error::AppInspect $label failed (exit $rc)"; return 1 ;;
+            esac
+            if ! jq -e '.summary | .failure == 0 and .error == 0 and .future_failure == 0' \
+                "$out" >/dev/null; then
+              echo "::error::AppInspect $label report has errors or failures, or is missing"
+              return 1
+            fi
+            echo "AppInspect $label passed (exit $rc)"
+          }
+          failed=0
+          gate precert || failed=1
+          gate cloud --included-tags cloud || failed=1
+          exit "$failed"
 
       - name: Upload AppInspect results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: appinspect-results
-          path: appinspect-results.json
+          path: appinspect-*.json
           retention-days: 7
