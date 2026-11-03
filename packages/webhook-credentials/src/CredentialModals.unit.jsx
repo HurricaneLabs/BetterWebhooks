@@ -75,6 +75,14 @@ describe.each(modals)('%sCredentialModal', (_, renderModal, triggerLabel) => {
         await waitForElementToBeRemoved(() => screen.queryByRole('dialog'));
     });
 
+    // react-ui 5 sizes a header icon from its own props, so "100%" drew it 552px wide.
+    it('draws a 20px header icon', async () => {
+        const { dialog } = await openModal(renderModal, triggerLabel);
+        const icon = dialog.querySelector('[data-test="header"] > svg');
+        expect(icon).toHaveAttribute('width', '20');
+        expect(icon).toHaveAttribute('height', '20');
+    });
+
     it('returns focus to its trigger after closing', async () => {
         const { trigger, dialog } = await openModal(renderModal, triggerLabel);
         // Focus has to leave the trigger first, or this test passes without returnFocus.
