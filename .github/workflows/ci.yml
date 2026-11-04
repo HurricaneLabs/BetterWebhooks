@@ -34,18 +34,25 @@ jobs:
         run: ruff check packages/better-webhooks/src/main/resources/splunk/bin/ packages/better-webhooks/tests/
 
   pytest:
-    name: Python unit tests
+    name: Python unit tests (${{ matrix.python }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      # Splunk 10.0 and 10.1 run the alert action on 3.9 (they ignore
+      # python.required); 10.2+ runs it on 3.13. 3.9 catches code that only
+      # works on a newer Python, like a `str | None` annotation.
+      matrix:
+        python: ["3.9", "3.13"]
     steps:
       - uses: actions/checkout@v4
 
       # No floating major tags after v6, so pinned exactly. Bump deliberately.
       - uses: astral-sh/setup-uv@v10.3.3
 
-      # 3.13 is what Splunk 10 runs the alert action on. --locked fails the job
-      # if uv.lock is out of date instead of quietly re-resolving it.
+      # --locked fails the job if uv.lock is out of date instead of quietly
+      # re-resolving it.
       - name: Run pytest
-        run: uv run --locked --python 3.13 pytest
+        run: uv run --locked --python ${{ matrix.python }} pytest
 
   test:
     name: JS unit tests
