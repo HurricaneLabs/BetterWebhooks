@@ -1,0 +1,18 @@
+# Test tooling for the Python alert action only. The app itself ships without
+# installing anything: Splunk provides Python and requests, and loguru is
+# vendored under bin/../lib. Ruff's config stays in ruff.toml.
+[project]
+name = "betterwebhooks-tests"
+version = "0"
+requires-python = ">=3.9"
+
+[dependency-groups]
+dev = ["pytest", "requests", "responses"]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["packages/better-webhooks/tests"]
+pythonpath = ["packages/better-webhooks/src/main/resources/splunk/bin"]
+addopts = "--strict-markers -ra"

@@ -4,7 +4,7 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "node bin/build.js build",
-    "eslint": "eslint src --ext \".js,.jsx\"",
+    "eslint": "eslint src --ext \".js,.jsx\" --max-warnings 0",
     "eslint:ci": "yarn run eslint -f junit -o test-reports/lint-results.xml",
     "eslint:fix": "eslint src --ext \".js, .jsx\" --fix",
     "link:app": "node bin/build.js link",
@@ -13,7 +13,7 @@
     "start": "webpack --watch",
     "start:app": "webpack --watch --config demo/webpack.splunkapp.config.js",
     "start:demo": "node bin/build.js demo",
-    "stylelint": "stylelint \"src/**/*.{js,jsx}\" --config stylelint.config.js",
+    "stylelint": "stylelint \"src/**/*.{js,jsx}\" --config stylelint.config.js --max-warnings 0",
     "test": "jest",
     "test:ci": "JEST_JUNIT_OUTPUT_DIR=./test-reports JEST_JUNIT_OUTPUT_NAME=unit-results.xml JEST_JUNIT_CLASSNAME=unit yarn run test --ci --reporters=default jest-junit --coverage --coverageDirectory=coverage_report/coverage_maps_unit --coverageReporters=cobertura",
     "test:watch": "jest --watch"

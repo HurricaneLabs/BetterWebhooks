@@ -13,6 +13,7 @@ from urllib.parse import urlparse, quote
 import requests
 import splunk.rest  # type: ignore
 from hmac_helper import get_hmac_headers
+from log_redaction import register_secret
 from oauth_helper import get_oauth_headers
 from splunk.clilib import cli_common as cli  # type: ignore
 
@@ -22,6 +23,10 @@ from loguru import logger
 
 logger.remove()  # Remove default formatter
 logger.add(sys.stderr, format="{level} {message}", level="DEBUG")
+
+# Credential fields that hold a secret, across every credential type. A new
+# secret field must be added here, or it can reach the log in an exception.
+SECRET_FIELDS = ("password", "header_value", "hmac_secret", "oauth_client_secret")
 
 
 def get_credential(name: str, session_key: str):
@@ -64,7 +69,8 @@ def send_webhook_request(
     body_failure_regex: str = "",
 ):
     """
-    Send the webhook and attempt to log as much information as possible if it fails.
+    Send the webhook and log why it failed, if it does. Never logs the request or
+    response body: they can carry search results, tokens or ticket data.
     """
     if url is None:
         logger.error("No URL provided")
@@ -90,13 +96,12 @@ def send_webhook_request(
 
     try:
         r = requests.post(url, data=body, headers=headers, auth=auth, proxies=proxies)
-        logger.debug("Response body was {}", r.text)
 
         if 200 <= r.status_code < 300:
             logger.info(
-                "Webhook receiver responded with HTTP status={}, response body={}",
+                "Webhook receiver responded with HTTP status={}, response size={} bytes",
                 r.status_code,
-                r.text,
+                len(r.content),
             )
 
             # Some receivers report failures in the body of an otherwise
@@ -109,10 +114,9 @@ def send_webhook_request(
                 try:
                     if re.search(body_failure_regex, r.text):
                         logger.error(
-                            "Webhook receiver responded with HTTP status={} but the response body matched the failure pattern {}, response body={}",
+                            "Webhook receiver responded with HTTP status={} but the response body matched the failure pattern {}",
                             r.status_code,
                             body_failure_regex,
-                            r.text,
                         )
                         return False
                 except re.error as exc:
@@ -125,9 +129,9 @@ def send_webhook_request(
             return True
         else:
             logger.error(
-                "Webhook receiver responded with HTTP status={}, response body={}",
+                "Webhook receiver responded with HTTP status={}, response size={} bytes",
                 r.status_code,
-                r.text,
+                len(r.content),
             )
             return False
 
@@ -163,6 +167,8 @@ if __name__ == "__main__":
 
         if credential_name:
             credential = get_credential(credential_name, session_key=session_key)
+            for field in SECRET_FIELDS:
+                register_secret(credential.get(field))
         else:
             credential = None
 
@@ -185,7 +191,6 @@ if __name__ == "__main__":
                 .replace("$full_result$", json.dumps(result))
             )
 
-        logger.debug("Body: {}", repr(body))
         body = body.encode()
 
         if not credential:
@@ -240,7 +245,8 @@ if __name__ == "__main__":
                 )
             except Exception:
                 logger.error(
-                    "Failed to obtain OAuth token, cannot send webhook. {}",
+                    "Failed to obtain OAuth token for credential {}, cannot send webhook. {}",
+                    credential_name,
                     traceback.format_exc(),
                 )
                 sys.exit(2)

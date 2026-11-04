@@ -31,7 +31,21 @@ jobs:
       - run: pip install ruff==0.16.7
 
       - name: Run ruff
-        run: ruff check packages/better-webhooks/src/main/resources/splunk/bin/
+        run: ruff check packages/better-webhooks/src/main/resources/splunk/bin/ packages/better-webhooks/tests/
+
+  pytest:
+    name: Python unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # No floating major tags after v6, so pinned exactly. Bump deliberately.
+      - uses: astral-sh/setup-uv@v10.3.3
+
+      # 3.13 is what Splunk 10 runs the alert action on. --locked fails the job
+      # if uv.lock is out of date instead of quietly re-resolving it.
+      - name: Run pytest
+        run: uv run --locked --python 3.13 pytest
 
   test:
     name: JS unit tests
@@ -64,7 +78,8 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
-      # eslint + stylelint in each package. no-console is a warning, so it passes.
+      # eslint + stylelint in each package, both with --max-warnings 0, so a
+      # warning (a stray console.log, say) fails the job.
       - name: Run lint
         run: yarn run lint
 

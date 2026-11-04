@@ -4,14 +4,14 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "node bin/build.js build",
-    "eslint": "eslint src --ext \".js,.jsx\"",
+    "eslint": "eslint src --ext \".js,.jsx\" --max-warnings 0",
     "eslint:ci": "yarn run eslint -f junit -o test-reports/lint-results.xml",
     "eslint:fix": "eslint src --ext \".js, .jsx\" --fix",
     "link:app": "node bin/build.js link",
     "lint": "yarn run eslint && yarn run stylelint",
     "lint:ci": "yarn run eslint:ci && yarn run stylelint",
     "start": "webpack --watch",
-    "stylelint": "stylelint \"src/**/*.{js,jsx}\" --config stylelint.config.js"
+    "stylelint": "stylelint \"src/**/*.{js,jsx}\" --config stylelint.config.js --max-warnings 0"
   },
   "dependencies": {},
   "devDependencies": {
