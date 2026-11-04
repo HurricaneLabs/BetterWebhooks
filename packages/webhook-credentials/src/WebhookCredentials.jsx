@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import PropTypes from 'prop-types';
 import Table from '@splunk/react-ui/Table';
-import P from '@splunk/react-ui/Paragraph';
 
 import EditCredentialModal from './EditCredentialModal';
 import NewCredentialModal from './NewCredentialModal';
@@ -16,10 +14,6 @@ import {
 } from './WebhookCredentialsStyles';
 import { getCredentials } from './http_utils';
 
-const propTypes = {
-    name: PropTypes.string,
-};
-
 const credTypeMap = {
     basic: 'HTTP Basic Auth',
     header: 'Custom HTTP Header',
@@ -30,13 +24,15 @@ const credTypeMap = {
 
 function formatCredential(entry) {
     try {
-        const cred_obj = JSON.parse(entry.content.clear_password);
-        cred_obj.name = entry.content.username;
-        cred_obj.app = entry.acl.app;
-        cred_obj.sharing = entry.acl.sharing;
-        cred_obj.owner = entry.acl.owner;
-        return cred_obj;
+        const credObj = JSON.parse(entry.content.clear_password);
+        credObj.name = entry.content.username;
+        credObj.app = entry.acl.app;
+        credObj.sharing = entry.acl.sharing;
+        credObj.owner = entry.acl.owner;
+        return credObj;
     } catch (error) {
+        // #27: this logs the decrypted secret. BWH-V2-3 removes the line, not this sweep.
+        // eslint-disable-next-line prefer-template
         console.log('Failed to parse credential: ' + entry.content.clear_password);
         return {
             name: entry.content.username,
@@ -69,8 +65,8 @@ const WebhookCredentials = () => {
         }
         try {
             getAndFormatCredentials();
-        } catch (error) {
-            setError(error.message || String(error));
+        } catch (err) {
+            setError(err.message || String(err));
         }
         setLoaded(true);
     }, [loaded]);
@@ -85,7 +81,7 @@ const WebhookCredentials = () => {
             </StyledHeader>
             <DescriptionText>
                 Define any credentials your webhooks need here. Once defined, they will be
-                selectable on the "Better Webhook" alert action page.
+                selectable on the &quot;Better Webhook&quot; alert action page.
             </DescriptionText>
 
             <br />
@@ -130,7 +126,5 @@ const WebhookCredentials = () => {
         </StyledContainer>
     );
 };
-
-WebhookCredentials.propTypes = propTypes;
 
 export default WebhookCredentials;

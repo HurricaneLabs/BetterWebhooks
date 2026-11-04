@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import PropTypes from 'prop-types';
 
 import Layout from '@splunk/react-icons/Layout';
 import Button from '@splunk/react-ui/Button';
@@ -48,7 +49,7 @@ function DeleteCredentialModal(props) {
             >
                 <form onSubmit={handleSubmit}>
                     <Modal.Header
-                        title={`Delete credential`}
+                        title="Delete credential"
                         icon={<Layout width={20} height={20} />}
                     />
 
@@ -69,5 +70,11 @@ function DeleteCredentialModal(props) {
         </>
     );
 }
+
+DeleteCredentialModal.propTypes = {
+    name: PropTypes.string.isRequired,
+    app: PropTypes.string.isRequired,
+    setLoaded: PropTypes.func.isRequired,
+};
 
 export default DeleteCredentialModal;

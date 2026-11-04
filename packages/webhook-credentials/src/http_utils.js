@@ -19,10 +19,13 @@ export async function getCredentials() {
     const passwordsEndpoint = '/en-US/splunkd/__raw/servicesNS/nobody/-/storage/passwords';
 
     try {
-        const resp = await fetch(`${passwordsEndpoint}?output_mode=json&count=0&search=realm%3D%22better_webhooks%22`, {
-            ...getDefaultFetchInit(),
-            method: 'GET',
-        });
+        const resp = await fetch(
+            `${passwordsEndpoint}?output_mode=json&count=0&search=realm%3D%22better_webhooks%22`,
+            {
+                ...getDefaultFetchInit(),
+                method: 'GET',
+            }
+        );
         const creds = await handleResponse(200)(resp);
         return creds;
     } catch (error) {
@@ -70,6 +73,9 @@ export async function saveExistingCredential(credential, name) {
     }
 }
 
+// #28: callers can't tell a failed delete from a success. BWH-V2-5 decides what this
+// resolves to, so the return stays as it is.
+// eslint-disable-next-line consistent-return
 export async function deleteCredential(name, app) {
     const passwordsEndpoint = `/en-US/splunkd/__raw/servicesNS/nobody/${app}/storage/passwords`;
 
@@ -86,15 +92,15 @@ export async function deleteCredential(name, app) {
     }
 }
 
-export async function updateSharing(credential_url, author, sharing, readPerms, writePerms) {
-    const config_url = credential_url.replace(
+export async function updateSharing(credentialUrl, author, sharing, readPerms, writePerms) {
+    const configUrl = credentialUrl.replace(
         '/storage/passwords/',
-        '/configs/conf-passwords/credential%3A',
+        '/configs/conf-passwords/credential%3A'
     );
-    const full_url = `/en-US/splunkd/__raw${config_url}/acl`;
+    const fullUrl = `/en-US/splunkd/__raw${configUrl}/acl`;
 
     try {
-        const resp = await fetch(full_url, {
+        const resp = await fetch(fullUrl, {
             ...getDefaultFetchInit(),
             method: 'POST',
             body: new URLSearchParams({

@@ -4,7 +4,7 @@ import layout from '@splunk/react-page';
 import WebhookCredentials from '@splunk/webhook-credentials';
 import { getUserTheme, getThemeOptions } from '@splunk/splunk-utils/themes';
 
-import { StyledContainer, StyledGreeting } from './StartStyles';
+import { StyledContainer } from './StartStyles';
 
 getUserTheme()
     .then((theme) => {

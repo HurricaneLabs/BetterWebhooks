@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import PropTypes from 'prop-types';
 
 import Layout from '@splunk/react-icons/Layout';
 import Button from '@splunk/react-ui/Button';
@@ -60,8 +61,8 @@ function NewCredentialModal(props) {
 
     useEffect(() => {
         getApps().then(
-            (apps) => setApps(apps),
-            (error) => setError(error.message || String(error))
+            (appNames) => setApps(appNames),
+            (err) => setError(err.message || String(err))
         );
     }, []);
 
@@ -76,9 +77,9 @@ function NewCredentialModal(props) {
             setTimeout(() => {
                 props.setLoaded(false);
             }, 10);
-        } catch (error) {
-            console.error('Error creating credential:', error);
-            setError(error.message || String(error));
+        } catch (err) {
+            console.error('Error creating credential:', err);
+            setError(err.message || String(err));
         }
     };
 
@@ -195,5 +196,9 @@ function NewCredentialModal(props) {
         </>
     );
 }
+
+NewCredentialModal.propTypes = {
+    setLoaded: PropTypes.func.isRequired,
+};
 
 export default NewCredentialModal;

@@ -13,7 +13,7 @@ BetterWebhooks is a Splunk app providing an enhanced webhook alert action (adapt
 - `ruff check packages/better-webhooks/src/main/resources/splunk/bin/` — Python lint (config in `ruff.toml`)
 - `splunk-appinspect inspect BetterWebhooks.spl --mode precert` — Splunkbase validation (build the SPL first)
 
-CI (`.github/workflows/`): `ci.yml` runs ruff + AppInspect on every push/PR; `build-spl.yml` builds the `.spl` artifact and attaches it to releases.
+CI (`.github/workflows/`): `ci.yml` runs ruff, the JS unit tests, JS lint + prettier check (`yarn run lint`, `format:verify`) and AppInspect on every push/PR; `build-spl.yml` builds the `.spl` artifact and attaches it to releases.
 
 ## Architecture
 
@@ -30,7 +30,7 @@ CI (`.github/workflows/`): `ci.yml` runs ruff + AppInspect on every push/PR; `bu
 package.json / lerna.json     # workspace root; all dev tasks are yarn scripts here
 package.js                    # SPL packaging script (yarn run package)
 ruff.toml / babel.config.js / .prettierrc   # shared toolchain config
-.github/workflows/            # ci.yml (ruff + AppInspect), build-spl.yml (SPL artifact + release upload)
+.github/workflows/            # ci.yml (ruff, JS tests, JS lint/format, AppInspect), build-spl.yml (SPL artifact + release upload)
 docs/
   source/                     # Sphinx docs (installation, alert action, credentials, proxy, troubleshooting)
 packages/

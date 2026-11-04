@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import ExclamationSquare from '@splunk/react-icons/ExclamationSquare';
 import ArrowsCircularDouble from '@splunk/react-icons/ArrowsCircularDouble';
 import P from '@splunk/react-ui/Paragraph';
@@ -31,14 +32,20 @@ const StatusMessage = ({ error, loaded, credentialsCount }) => {
             <>
                 <br />
                 <P>
-                    <ExclamationSquare /> No credentials found. Add one by clicking "New
-                    Credential".
+                    <ExclamationSquare /> No credentials found. Add one by clicking &quot;New
+                    Credential&quot;.
                 </P>
             </>
         );
     }
 
     return null;
+};
+
+StatusMessage.propTypes = {
+    error: PropTypes.string,
+    loaded: PropTypes.bool.isRequired,
+    credentialsCount: PropTypes.number.isRequired,
 };
 
 export default StatusMessage;

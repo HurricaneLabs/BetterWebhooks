@@ -1,13 +1,36 @@
-import React, { useState, useRef } from 'react';
+import React from 'react';
+import PropTypes from 'prop-types';
 
 import Text from '@splunk/react-ui/Text';
 import Select from '@splunk/react-ui/Select';
 import ControlGroup from '@splunk/react-ui/ControlGroup';
 import Message from '@splunk/react-ui/Message';
 
+// Every field a credential form reads. Each form uses only its own type's fields.
+const credShape = PropTypes.shape({
+    username: PropTypes.string,
+    password: PropTypes.string,
+    header_name: PropTypes.string,
+    header_value: PropTypes.string,
+    hmac_secret: PropTypes.string,
+    hmac_hash_function: PropTypes.string,
+    hmac_digest_type: PropTypes.string,
+    hmac_sig_header: PropTypes.string,
+    hmac_time_header: PropTypes.string,
+    oauth_client_id: PropTypes.string,
+    oauth_client_secret: PropTypes.string,
+    oauth_token_url: PropTypes.string,
+    oauth_scope: PropTypes.string,
+});
+
+const formPropTypes = {
+    cred: credShape.isRequired,
+    setCredential: PropTypes.func.isRequired,
+};
+
 function HTTPCredForm(props) {
     const handleChangeUsername = (event) => {
-        let credential = {
+        const credential = {
             type: 'basic',
             username: event.target.value,
             password: props.cred.password,
@@ -16,7 +39,7 @@ function HTTPCredForm(props) {
     };
 
     const handleChangePassword = (event) => {
-        let credential = {
+        const credential = {
             type: 'basic',
             username: props.cred.username,
             password: event.target.value,
@@ -48,7 +71,7 @@ function HTTPCredForm(props) {
 
 function HeaderCredForm(props) {
     const handleChangeHeaderName = (event) => {
-        let credential = {
+        const credential = {
             type: 'header',
             header_name: event.target.value,
             header_value: props.cred.header_value,
@@ -57,7 +80,7 @@ function HeaderCredForm(props) {
     };
 
     const handleChangeHeaderValue = (event) => {
-        let credential = {
+        const credential = {
             type: 'header',
             header_name: props.cred.header_name,
             header_value: event.target.value,
@@ -89,7 +112,7 @@ function HeaderCredForm(props) {
 
 function HMACForm(props) {
     const handleChangeSecret = (event) => {
-        let credential = {
+        const credential = {
             type: 'hmac',
             hmac_secret: event.target.value,
             hmac_hash_function: props.cred.hmac_hash_function,
@@ -101,7 +124,7 @@ function HMACForm(props) {
     };
 
     const handleChangeHashFunction = (event, { value }) => {
-        let credential = {
+        const credential = {
             type: 'hmac',
             hmac_secret: props.cred.hmac_secret,
             hmac_hash_function: value,
@@ -113,7 +136,7 @@ function HMACForm(props) {
     };
 
     const handleChangeDigestType = (event, { value }) => {
-        let credential = {
+        const credential = {
             type: 'hmac',
             hmac_secret: props.cred.hmac_secret,
             hmac_hash_function: props.cred.hmac_hash_function,
@@ -125,7 +148,7 @@ function HMACForm(props) {
     };
 
     const handleChangeSigHeader = (event) => {
-        let credential = {
+        const credential = {
             type: 'hmac',
             hmac_secret: props.cred.hmac_secret,
             hmac_hash_function: props.cred.hmac_hash_function,
@@ -137,7 +160,7 @@ function HMACForm(props) {
     };
 
     const handleChangeTimeHeader = (event) => {
-        let credential = {
+        const credential = {
             type: 'hmac',
             hmac_secret: props.cred.hmac_secret,
             hmac_hash_function: props.cred.hmac_hash_function,
@@ -210,7 +233,7 @@ function HMACForm(props) {
 
 function OAuthForm(props) {
     const handleChangeClientID = (event) => {
-        let credential = {
+        const credential = {
             type: 'oauth',
             oauth_client_id: event.target.value,
             oauth_client_secret: props.cred.oauth_client_secret,
@@ -221,7 +244,7 @@ function OAuthForm(props) {
     };
 
     const handleChangeClientSecret = (event, { value }) => {
-        let credential = {
+        const credential = {
             type: 'oauth',
             oauth_client_id: props.cred.oauth_client_id,
             oauth_client_secret: value,
@@ -232,7 +255,7 @@ function OAuthForm(props) {
     };
 
     const handleChangeTokenUrl = (event, { value }) => {
-        let credential = {
+        const credential = {
             type: 'oauth',
             oauth_client_id: props.cred.oauth_client_id,
             oauth_client_secret: props.cred.oauth_client_secret,
@@ -243,7 +266,7 @@ function OAuthForm(props) {
     };
 
     const handleChangeScope = (event) => {
-        let credential = {
+        const credential = {
             type: 'oauth',
             oauth_client_id: props.cred.oauth_client_id,
             oauth_client_secret: props.cred.oauth_client_secret,
@@ -307,20 +330,33 @@ function GenericCredForm(props) {
                     {props.error}
                 </Message>
             )}
-            {props.type == 'basic' && (
+            {props.type === 'basic' && (
                 <HTTPCredForm cred={props.cred} setCredential={props.setCredential} />
             )}
-            {props.type == 'header' && (
+            {props.type === 'header' && (
                 <HeaderCredForm cred={props.cred} setCredential={props.setCredential} />
             )}
-            {props.type == 'hmac' && (
+            {props.type === 'hmac' && (
                 <HMACForm cred={props.cred} setCredential={props.setCredential} />
             )}
-            {props.type == 'oauth' && (
+            {props.type === 'oauth' && (
                 <OAuthForm cred={props.cred} setCredential={props.setCredential} />
             )}
         </>
     );
 }
+
+HTTPCredForm.propTypes = formPropTypes;
+HeaderCredForm.propTypes = formPropTypes;
+HMACForm.propTypes = formPropTypes;
+OAuthForm.propTypes = formPropTypes;
+// Written out rather than spread from formPropTypes: eslint's prop-types rule stops
+// checking a component whose propTypes contain a spread.
+GenericCredForm.propTypes = {
+    type: PropTypes.string,
+    cred: credShape.isRequired,
+    setCredential: PropTypes.func.isRequired,
+    error: PropTypes.string,
+};
 
 export default GenericCredForm;
