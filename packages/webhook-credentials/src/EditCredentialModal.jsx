@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import PropTypes from 'prop-types';
 
 import Layout from '@splunk/react-icons/Layout';
 import Button from '@splunk/react-ui/Button';
@@ -32,6 +33,8 @@ function EditCredentialModal(props) {
         }
     };
 
+    // #29: dead handlers calling setters that don't exist. BWH-V2-5 removes them.
+    /* eslint-disable no-unused-vars, no-undef */
     const handleChangeUsername = (event) => {
         setUsername(event.target.value);
     };
@@ -39,6 +42,7 @@ function EditCredentialModal(props) {
     const handleChangePassword = (event) => {
         setPassword(event.target.value);
     };
+    /* eslint-enable no-unused-vars, no-undef */
 
     const handleSubmit = (event) => {
         event.preventDefault();
@@ -85,5 +89,11 @@ function EditCredentialModal(props) {
         </>
     );
 }
+
+EditCredentialModal.propTypes = {
+    name: PropTypes.string.isRequired,
+    type: PropTypes.string,
+    cred: PropTypes.object.isRequired,
+};
 
 export default EditCredentialModal;
