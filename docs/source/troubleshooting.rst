@@ -19,12 +19,11 @@ NOTE: The above should work fine for find whether or not an error occurred, but
 tracebacks are multiline and will be excluded. If you're investigating a specific
 error I would use the first search so that no log events are missed.
 
-The alert action logs the response body from the webhook receiver at INFO level,
-so it will appear in the standard search above without requiring any log level changes.
-This is useful for capturing response data such as ticket numbers from systems like Jira.
-
-If the log level for the "sendmodalert" alert channel is DEBUG, the alert action
-will additionally log the full POST body sent with the request.
+The alert action logs the webhook receiver's HTTP status and the size of its
+response at INFO level, so they appear in the standard search above without any
+log level changes. It never logs the request or response body, which can carry
+search results, tokens or ticket data, and it replaces any credential secret that
+turns up in an error message with ``[REDACTED]``.
 
 SSL Certificate Errors (Internal / Private CA)
 -----------------------------------------------

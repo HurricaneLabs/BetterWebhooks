@@ -78,6 +78,7 @@ function NewCredentialModal(props) {
                 props.setLoaded(false);
             }, 10);
         } catch (err) {
+            // eslint-disable-next-line no-console -- err is a save or network error, never the credential
             console.error('Error creating credential:', err);
             setError(err.message || String(err));
         }

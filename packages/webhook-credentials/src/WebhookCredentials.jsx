@@ -31,9 +31,6 @@ function formatCredential(entry) {
         credObj.owner = entry.acl.owner;
         return credObj;
     } catch (error) {
-        // #27: this logs the decrypted secret. BWH-V2-3 removes the line, not this sweep.
-        // eslint-disable-next-line prefer-template
-        console.log('Failed to parse credential: ' + entry.content.clear_password);
         return {
             name: entry.content.username,
             app: entry.acl.app,

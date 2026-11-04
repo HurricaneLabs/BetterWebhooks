@@ -86,6 +86,22 @@ out.
   | If this field is blank, the timestamp won't be sent and won't be added to the
   | body as part of the signature calculation.
 
+OAuth Client Credential
+________________________
+
+Before each webhook, the alert action fetches an access token with the OAuth 2.0
+client credentials grant and sends it as ``Authorization: Bearer <token>``. The
+client ID and secret go to the token URL as HTTP Basic auth.
+
+* **Name**: The name of the credential.
+* **Credential ID**: The OAuth client ID.
+* **Credential secret**: The OAuth client secret.
+* | **Token URL**: The token endpoint, for example
+  | :code:`https://login.microsoftonline.com/<tenant>/oauth2/v2.0/token`.
+  | It must be HTTPS. The client secret is sent to it, so the alert action refuses
+  | an ``http://`` token URL and fails the delivery without sending anything.
+* **Scope**: The scope to request, if the token endpoint needs one. Otherwise leave it blank.
+
 .. autosummary::
    :toctree: generated
 
