@@ -53,6 +53,7 @@ def get_credential(name: str, session_key: str):
     # And so is the credential itself
     return json.loads(credential)
 
+
 def send_webhook_request(
     url: str,
     body: bytes,
@@ -92,7 +93,11 @@ def send_webhook_request(
         logger.debug("Response body was {}", r.text)
 
         if 200 <= r.status_code < 300:
-            logger.info("Webhook receiver responded with HTTP status={}, response body={}", r.status_code, r.text)
+            logger.info(
+                "Webhook receiver responded with HTTP status={}, response body={}",
+                r.status_code,
+                r.text,
+            )
 
             # Some receivers report failures in the body of an otherwise
             # successful HTTP response (e.g. the Slack Web API answers HTTP 200
@@ -119,7 +124,11 @@ def send_webhook_request(
 
             return True
         else:
-            logger.error("Webhook receiver responded with HTTP status={}, response body={}", r.status_code, r.text)
+            logger.error(
+                "Webhook receiver responded with HTTP status={}, response body={}",
+                r.status_code,
+                r.text,
+            )
             return False
 
     except Exception:
@@ -227,7 +236,7 @@ if __name__ == "__main__":
                     client_id=oauth_client_id,
                     client_secret=oauth_client_secret,
                     token_url=oauth_token_url,
-                    scope=oauth_scope
+                    scope=oauth_scope,
                 )
             except Exception:
                 logger.error(

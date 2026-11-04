@@ -7,7 +7,10 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "lib"))
 
 from loguru import logger
 
-def get_oauth_headers(client_id: str, client_secret: str, token_url: str, scope: str = ""):
+
+def get_oauth_headers(
+    client_id: str, client_secret: str, token_url: str, scope: str = ""
+):
     """
     Request a client_credentials OAuth token and return headers for the bearer token.
     Logs status and errors; raises on failure.
@@ -16,12 +19,23 @@ def get_oauth_headers(client_id: str, client_secret: str, token_url: str, scope:
     if scope:
         payload["scope"] = scope
 
-    logger.debug("Requesting OAuth token from {} for client_id={} scope={}", token_url, client_id, scope)
+    logger.debug(
+        "Requesting OAuth token from {} for client_id={} scope={}",
+        token_url,
+        client_id,
+        scope,
+    )
 
     try:
-        resp = requests.post(token_url, data=payload, auth=(client_id, client_secret), timeout=300)
+        resp = requests.post(
+            token_url, data=payload, auth=(client_id, client_secret), timeout=300
+        )
     except requests.RequestException:
-        logger.error("OAuth token request to {} failed with exception:\n{}", token_url, traceback.format_exc())
+        logger.error(
+            "OAuth token request to {} failed with exception:\n{}",
+            token_url,
+            traceback.format_exc(),
+        )
         raise Exception("OAuth token request failed (network error)")
 
     logger.debug("OAuth token endpoint responded with status={}", resp.status_code)
