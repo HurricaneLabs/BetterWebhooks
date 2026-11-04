@@ -8,7 +8,6 @@
 
 const shell = require('shelljs');
 const path = require('path');
-const os = require('os');
 
 // Ensure we exit on any error
 shell.config.fatal = true;
