@@ -5,6 +5,7 @@ from typing import Callable, Optional
 
 import pytest
 import responses
+from loguru import logger
 
 WEBHOOK_URL = "https://hooks.example.com/webhook"
 TOKEN_URL = "https://idp.example/token"
@@ -94,6 +95,62 @@ def test_a_secret_inside_an_exception_message_is_redacted(run_alert: Callable) -
     assert "InvalidHeader" in run.log
     assert "[REDACTED]" in run.log
     assert CREDENTIAL_SECRET not in run.log
+
+
+# One case per secret field, hard-coded rather than built from SECRET_FIELDS, so
+# a typo in or removal from that tuple drops a field this test still checks.
+@responses.activate
+@pytest.mark.parametrize(
+    "credential",
+    [
+        pytest.param(
+            {"type": "basic", "username": "user", "password": CREDENTIAL_SECRET},
+            id="password",
+        ),
+        pytest.param(
+            {
+                "type": "header",
+                "header_name": "X-Api-Key",
+                "header_value": CREDENTIAL_SECRET,
+            },
+            id="header_value",
+        ),
+        pytest.param(
+            {
+                "type": "hmac",
+                "hmac_secret": CREDENTIAL_SECRET,
+                "hmac_hash_function": "sha256",
+                "hmac_digest_type": "hex",
+                "hmac_sig_header": "X-Sig",
+            },
+            id="hmac_secret",
+        ),
+        pytest.param(
+            {
+                "type": "oauth",
+                "oauth_client_id": "client",
+                "oauth_client_secret": CREDENTIAL_SECRET,
+                "oauth_token_url": TOKEN_URL,
+            },
+            id="oauth_client_secret",
+        ),
+    ],
+)
+def test_every_secret_field_is_redacted(
+    run_alert: Callable, capsys: pytest.CaptureFixture, credential: dict
+) -> None:
+    """Each secret field is registered, so any later log line quoting it is scrubbed."""
+    responses.post(TOKEN_URL, json={"access_token": "token"})
+    responses.post(WEBHOOK_URL, body="ok")
+
+    run = run_alert(alert_settings(credential="better_webhooks:cred:"), credential)
+    assert run.exit_code == 0
+
+    logger.error("quoted in an exception: {}", CREDENTIAL_SECRET)
+    log = capsys.readouterr().err
+
+    assert "quoted in an exception: [REDACTED]" in log
+    assert CREDENTIAL_SECRET not in log
 
 
 @responses.activate
