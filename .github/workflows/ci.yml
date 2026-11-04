@@ -50,6 +50,28 @@ jobs:
       - name: Run tests
         run: yarn run test
 
+  lint:
+    name: JS lint and format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: "yarn"
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      # eslint + stylelint in each package. no-console is a warning, so it passes.
+      - name: Run lint
+        run: yarn run lint
+
+      # Covers tracked .js/.jsx/.css only, so the workflow YAML is never checked.
+      - name: Check formatting
+        run: yarn run format:verify
+
   appinspect:
     name: Splunk AppInspect
     runs-on: ubuntu-latest
