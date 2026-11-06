@@ -14,7 +14,7 @@ from urllib.parse import quote, urlparse
 import requests
 import splunk.rest  # type: ignore
 from hmac_helper import get_hmac_headers
-from log_redaction import register_secret
+from log_redaction import register_secret, register_url, url_host
 from oauth_helper import REQUEST_TIMEOUT, OAuthTokenError, get_oauth_headers
 from splunk.clilib import cli_common as cli  # type: ignore
 from urllib3.exceptions import ReadTimeoutError
@@ -76,13 +76,18 @@ def send_webhook_request(
 ):
     """
     Send the webhook and log why it failed, if it does. Never logs the request or
-    response body: they can carry search results, tokens or ticket data.
+    response body: they can carry search results, tokens or ticket data. Nor any
+    part of the URL but its host: for some receivers (Slack, for one) the path is
+    the secret.
     """
     if url is None:
         logger.error("No URL provided")
         return False
+    register_url(url)
 
     if proxy:
+        # requests quotes the whole proxy URL, password and all, when it won't parse
+        register_url(proxy)
         proxies = {
             "http": proxy,
             "https": proxy,
@@ -95,8 +100,8 @@ def send_webhook_request(
 
     headers["User-Agent"] = user_agent
     logger.info(
-        "Sending POST request to url={} with size={} bytes payload",
-        url,
+        "Sending POST request to host={} with size={} bytes payload",
+        url_host(url),
         len(body),
     )
 
@@ -170,7 +175,11 @@ def send_webhook_request(
         if isinstance(exc, requests.Timeout) or (
             exc.args and isinstance(exc.args[0], ReadTimeoutError)
         ):
-            logger.error("Webhook request to url={} timed out, giving up: {}", url, exc)
+            logger.error(
+                "Webhook request to host={} timed out, giving up: {}",
+                url_host(url),
+                exc,
+            )
             return False
         logger.error(
             "Unhandled exception when attempting to execute alert action. {}",

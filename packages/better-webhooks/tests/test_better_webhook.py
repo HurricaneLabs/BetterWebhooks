@@ -8,6 +8,7 @@ import socket
 import threading
 from collections.abc import Iterator
 from typing import Callable
+from urllib.parse import urlsplit
 
 import pytest
 import responses
@@ -23,6 +24,25 @@ TOKEN_URL = "https://idp.example/token"
 REQUEST_SECRET = "SEKRET-request-91c2"
 RESPONSE_SECRET = "SEKRET-response-4b7f"
 CREDENTIAL_SECRET = "SEKRET-credential-e03a"
+
+# Markers for the parts of a URL that can be the secret itself: Slack's
+# /services/T…/B…/<token>, a signed ?sig=…, a user:password@.
+URL_PATH_SECRET = "SEKRET-url-path-7a31"
+URL_QUERY_SECRET = "SEKRET-url-query-c58d"
+URL_PASSWORD_SECRET = "SEKRET-url-password-2e94"
+URL_SECRETS = (URL_PATH_SECRET, URL_QUERY_SECRET, URL_PASSWORD_SECRET)
+
+
+def secret_url(host: str, path: str = "/services/T0/B0") -> str:
+    """Build an https URL with a secret in its userinfo, path and query.
+
+    The space and the é make requests percent-encode the path, so its error
+    messages quote it in a different form from the one configured.
+    """
+    return (
+        f"https://user:{URL_PASSWORD_SECRET}@{host}{path}/{URL_PATH_SECRET} é"
+        f"?sig={URL_QUERY_SECRET}"
+    )
 
 
 def alert_settings(credential: str | None = None, body_failure_regex: str = "") -> dict:
@@ -237,7 +257,9 @@ def test_a_redirect_fails_the_alert_and_nothing_follows_it(
     After a 301, 302 or 303 requests resends a bodyless GET, so the alert was
     never delivered; after a 307 or 308 it resends the POST, search results and all.
     """
-    redirect_target = "http://collector.example/webhook"
+    redirect_target = (
+        f"http://collector.example/webhook/{URL_PATH_SECRET}?sig={URL_QUERY_SECRET}"
+    )
     responses.post(WEBHOOK_URL, status=status, headers={"Location": redirect_target})
     # Both methods, so a followed redirect lands as a recorded call, not an error
     responses.get(redirect_target, body="ok")
@@ -254,6 +276,84 @@ def test_a_redirect_fails_the_alert_and_nothing_follows_it(
     assert run.exit_code == 2
     assert f"redirect (HTTP status={status})" in run.log
     assert CREDENTIAL_SECRET not in run.log
+    # The Location can carry a secret too
+    assert URL_PATH_SECRET not in run.log
+    assert URL_QUERY_SECRET not in run.log
+
+
+@responses.activate
+def test_a_delivery_logs_the_webhook_host_but_no_other_part_of_its_url(
+    run_alert: Callable,
+) -> None:
+    """For a Slack-style webhook the URL's path is the secret, so only the host is logged."""
+    url = secret_url("hooks.example.com")
+    responses.post(url, body="ok")
+    settings = alert_settings()
+    settings["configuration"]["url"] = url
+
+    run = run_alert(settings)
+
+    assert run.exit_code == 0
+    assert "host=hooks.example.com" in run.log
+    for secret in URL_SECRETS:
+        assert secret not in run.log
+
+
+def test_a_refused_connection_keeps_the_webhook_url_out_of_the_log(
+    run_alert: Callable, closed_port: int
+) -> None:
+    """requests quotes the URL's path and query, percent-encoded, in its connection errors."""
+    settings = alert_settings()
+    settings["configuration"]["url"] = secret_url(f"127.0.0.1:{closed_port}")
+
+    run = run_alert(settings)
+
+    assert run.exit_code == 2
+    assert "Max retries exceeded" in run.log
+    assert "[REDACTED]" in run.log
+    for secret in URL_SECRETS:
+        assert secret not in run.log
+
+
+@responses.activate
+@pytest.mark.parametrize(
+    "url", ["https://hooks.example.com", "https://hooks.example.com/"]
+)
+def test_a_url_with_no_path_leaves_the_slashes_in_the_log_alone(
+    run_alert: Callable, capsys: pytest.CaptureFixture, url: str
+) -> None:
+    """requests sends an empty path as "/", which mustn't become a secret."""
+    responses.post(url, body="ok")
+    settings = alert_settings()
+    settings["configuration"]["url"] = url
+
+    run = run_alert(settings)
+    assert run.exit_code == 0
+
+    logger.error('File "/opt/splunk/bin/better_webhook.py", line 1')
+    log = capsys.readouterr().err
+
+    assert 'File "/opt/splunk/bin/better_webhook.py", line 1' in log
+
+
+def test_an_unreachable_token_url_stays_out_of_the_log(
+    run_alert: Callable, closed_port: int
+) -> None:
+    """The OAuth error chains requests' error, so the final traceback quotes the token URL too."""
+    credential = {
+        "type": "oauth",
+        "oauth_client_id": "client",
+        "oauth_client_secret": CREDENTIAL_SECRET,
+        "oauth_token_url": secret_url(f"127.0.0.1:{closed_port}", path="/token"),
+    }
+
+    run = run_alert(alert_settings(credential="better_webhooks:cred:"), credential)
+
+    assert run.exit_code == 2
+    assert "Failed to obtain OAuth token" in run.log
+    assert "[REDACTED]" in run.log
+    for secret in (*URL_SECRETS, CREDENTIAL_SECRET):
+        assert secret not in run.log
 
 
 class _OkHandler(http.server.BaseHTTPRequestHandler):
@@ -301,19 +401,42 @@ def test_a_header_value_http_cannot_encode_fails_the_delivery(
     assert any("UnicodeEncodeError" in line for line in log_lines)
 
 
+@pytest.mark.parametrize("port", ["80a", "99999"])
+def test_a_proxy_url_that_does_not_parse_keeps_its_password_out_of_the_log(
+    log_lines: list[str], port: str
+) -> None:
+    """requests quotes the whole proxy URL, password included, when its port won't parse."""
+    delivered = send_webhook_request(
+        WEBHOOK_URL,
+        b"{}",
+        {},
+        None,
+        user_agent="Splunk",
+        proxy=f"http://user:{URL_PASSWORD_SECRET}@proxy.example:{port}",
+    )
+
+    assert delivered is False
+    assert any("InvalidURL" in line for line in log_lines)
+    assert not any(URL_PASSWORD_SECRET in line for line in log_lines)
+
+
 @pytest.mark.usefixtures("short_timeout")
 def test_a_receiver_that_never_answers_fails_the_alert_with_a_timeout(
     run_alert: Callable, silent_receiver: int
 ) -> None:
-    """Without a timeout, Splunk's maxtime kills the script before it can say why."""
-    url = f"https://127.0.0.1:{silent_receiver}/webhook"
+    """Without a timeout, Splunk's maxtime kills the script before it can say why.
+
+    The timeout line names the receiver by its host alone.
+    """
     settings = alert_settings()
-    settings["configuration"]["url"] = url
+    settings["configuration"]["url"] = secret_url(f"127.0.0.1:{silent_receiver}")
 
     run = run_alert(settings)
 
     assert run.exit_code == 2
-    assert f"Webhook request to url={url} timed out" in run.log
+    assert f"Webhook request to host=127.0.0.1:{silent_receiver} timed out" in run.log
+    for secret in URL_SECRETS:
+        assert secret not in run.log
 
 
 @pytest.mark.usefixtures("short_timeout")
@@ -328,7 +451,10 @@ def test_a_receiver_that_takes_the_post_and_never_replies_times_out(
     )
 
     assert delivered is False
-    assert any(f"Webhook request to url={url} timed out" in line for line in log_lines)
+    assert any(
+        f"Webhook request to host=127.0.0.1:{silent_receiver} timed out" in line
+        for line in log_lines
+    )
 
 
 @pytest.fixture
@@ -370,8 +496,8 @@ def test_a_receiver_that_stalls_partway_through_its_reply_times_out(
         stalled_body_receiver, b"{}", {}, None, user_agent="Splunk", proxy=""
     )
 
+    host = urlsplit(stalled_body_receiver).netloc
     assert delivered is False
     assert any(
-        f"Webhook request to url={stalled_body_receiver} timed out" in line
-        for line in log_lines
+        f"Webhook request to host={host} timed out" in line for line in log_lines
     )

@@ -25,6 +25,12 @@ log level changes. It never logs the request or response body, which can carry
 search results, tokens or ticket data, and it replaces any credential secret that
 turns up in an error message with ``[REDACTED]``.
 
+It names the webhook receiver and an OAuth credential's token endpoint by host
+alone, for example ``host=hooks.slack.com``, because for some receivers (Slack's
+incoming webhooks, for one) the URL's path is the secret. The path, the query
+string and any ``user:password@`` are replaced with ``[REDACTED]`` when an error
+message quotes them.
+
 Timeouts
 --------
 
@@ -32,7 +38,7 @@ The alert action waits up to 10 seconds to connect to the webhook receiver, and
 then up to 60 seconds for each part of its reply. A receiver that doesn't answer
 in time fails the alert with an error like::
 
-    Webhook request to url=https://hooks.example.com/webhook timed out, giving up: ...
+    Webhook request to host=hooks.example.com timed out, giving up: ...
 
 An OAuth credential's token request gets the same limits. Together they stay
 under Splunk's 5-minute limit for an alert action (``maxtime``), so a receiver

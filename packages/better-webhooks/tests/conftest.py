@@ -101,6 +101,16 @@ def silent_receiver() -> Iterator[int]:
 
 
 @pytest.fixture
+def closed_port() -> int:
+    """Return a localhost port nothing listens on, so a connection to it is refused."""
+    sock = socket.socket()
+    sock.bind(("127.0.0.1", 0))
+    port = sock.getsockname()[1]
+    sock.close()
+    return port
+
+
+@pytest.fixture
 def short_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
     """Cut every POST's (connect, read) timeout to half a second.
 
