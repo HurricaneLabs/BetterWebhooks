@@ -38,9 +38,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      # Splunk 10.0 and 10.1 run the alert action on 3.9 (they ignore
-      # python.required); 10.2+ runs it on 3.13. 3.9 catches code that only
-      # works on a newer Python, like a `str | None` annotation.
+      # Splunk 10.4+ (the app's floor) runs the alert action on 3.13. The 3.9
+      # job dates from the 10.0 floor, when 10.0 and 10.1 ran it on 3.9; it
+      # catches code that only works on a newer Python, like `str | None`.
       matrix:
         python: ["3.9", "3.13"]
     steps:
