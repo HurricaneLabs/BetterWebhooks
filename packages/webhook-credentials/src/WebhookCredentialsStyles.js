@@ -27,4 +27,13 @@ const AlignRight = styled.div`
 const DescriptionText = styled.p`
     max-width: 600px;
 `;
-export { StyledContainer, AlignRight, StyledHeader, DescriptionText };
+
+// react-ui 5's Modal is a flex column that scrolls only a Modal.Body that is its direct
+// child. Our modals wrap Header, Body and Footer in a form, so the form has to be a flex
+// column too, and min-height: 0 lets it shrink to fit a short window.
+const ModalForm = styled.form`
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+`;
+export { StyledContainer, AlignRight, StyledHeader, DescriptionText, ModalForm };

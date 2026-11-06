@@ -63,7 +63,7 @@ export async function saveExistingCredential(credential, name) {
         const resp = await fetch(`${passwordsEndpoint}/better_webhooks:${name}:`, {
             ...getDefaultFetchInit(),
             method: 'POST',
-            body: `password=${encoded}`,
+            body: `password=${encoded}&output_mode=json`,
         });
 
         const processedResp = await handleResponse(200)(resp);
@@ -73,20 +73,19 @@ export async function saveExistingCredential(credential, name) {
     }
 }
 
-// #28: callers can't tell a failed delete from a success. BWH-V2-5 decides what this
-// resolves to, so the return stays as it is.
-// eslint-disable-next-line consistent-return
 export async function deleteCredential(name, app) {
     const passwordsEndpoint = `/en-US/splunkd/__raw/servicesNS/nobody/${app}/storage/passwords`;
 
     try {
-        const resp = await fetch(`${passwordsEndpoint}/better_webhooks:${name}:`, {
+        // output_mode goes in the URL: a DELETE has no body, and fetch ignores unknown
+        // init keys, so without it splunkd answers in XML and handleResponse rejects.
+        const resp = await fetch(`${passwordsEndpoint}/better_webhooks:${name}:?output_mode=json`, {
             ...getDefaultFetchInit(),
             method: 'DELETE',
-            output_mode: 'json',
         });
 
         await handleResponse(200)(resp);
+        return { success: true };
     } catch (error) {
         return handleError('An error occurred while deleting credential')(error);
     }
