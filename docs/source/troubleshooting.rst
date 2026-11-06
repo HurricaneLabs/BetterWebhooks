@@ -35,8 +35,9 @@ in time fails the alert with an error like::
     Webhook request to url=https://hooks.example.com/webhook timed out, giving up: ...
 
 An OAuth credential's token request gets the same limits. Together they stay
-under Splunk's 5-minute limit for an alert action (``maxtime``), so the action
-can log why it gave up before Splunk stops it.
+under Splunk's 5-minute limit for an alert action (``maxtime``), so a receiver
+that stops answering fails with a logged reason before Splunk stops the action.
+A receiver that keeps sending its reply slowly can still run into ``maxtime``.
 
 SSL Certificate Errors (Internal / Private CA)
 -----------------------------------------------
