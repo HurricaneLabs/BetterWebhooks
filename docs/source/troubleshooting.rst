@@ -25,6 +25,19 @@ log level changes. It never logs the request or response body, which can carry
 search results, tokens or ticket data, and it replaces any credential secret that
 turns up in an error message with ``[REDACTED]``.
 
+Timeouts
+--------
+
+The alert action waits up to 10 seconds to connect to the webhook receiver, and
+then up to 60 seconds for each part of its reply. A receiver that doesn't answer
+in time fails the alert with an error like::
+
+    Webhook request to url=https://hooks.example.com/webhook timed out, giving up: ...
+
+An OAuth credential's token request gets the same limits. Together they stay
+under Splunk's 5-minute limit for an alert action (``maxtime``), so the action
+can log why it gave up before Splunk stops it.
+
 SSL Certificate Errors (Internal / Private CA)
 -----------------------------------------------
 

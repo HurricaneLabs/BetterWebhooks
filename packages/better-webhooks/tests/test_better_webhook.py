@@ -269,3 +269,33 @@ def test_a_header_value_http_cannot_encode_fails_the_delivery(
 
     assert delivered is False
     assert any("UnicodeEncodeError" in line for line in log_lines)
+
+
+@pytest.mark.usefixtures("short_timeout")
+def test_a_receiver_that_never_answers_fails_the_alert_with_a_timeout(
+    run_alert: Callable, silent_receiver: int
+) -> None:
+    """Without a timeout, Splunk's maxtime kills the script before it can say why."""
+    url = f"https://127.0.0.1:{silent_receiver}/webhook"
+    settings = alert_settings()
+    settings["configuration"]["url"] = url
+
+    run = run_alert(settings)
+
+    assert run.exit_code == 2
+    assert f"Webhook request to url={url} timed out" in run.log
+
+
+@pytest.mark.usefixtures("short_timeout")
+def test_a_receiver_that_takes_the_post_and_never_replies_times_out(
+    silent_receiver: int, log_lines: list[str]
+) -> None:
+    """Plain HTTP gets the request onto the wire, so this is the read timeout, not the connect one."""
+    url = f"http://127.0.0.1:{silent_receiver}/webhook"
+
+    delivered = send_webhook_request(
+        url, b"{}", {}, None, user_agent="Splunk", proxy=""
+    )
+
+    assert delivered is False
+    assert any(f"Webhook request to url={url} timed out" in line for line in log_lines)

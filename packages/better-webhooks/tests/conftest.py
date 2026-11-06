@@ -10,7 +10,9 @@ from __future__ import annotations
 import io
 import json
 import runpy
+import socket
 import sys
+import threading
 import types
 from collections.abc import Iterator
 from pathlib import Path
@@ -77,6 +79,40 @@ def log_lines() -> Iterator[list[str]]:
     lines: list[str] = []
     logger.add(lines.append, format="{level} {message}", level="DEBUG")
     yield lines
+
+
+@pytest.fixture
+def silent_receiver() -> Iterator[int]:
+    """Listen on a localhost port that takes connections and never answers; yield the port.
+
+    Nothing accepts or reads, so the kernel completes the TCP handshake and the
+    client waits on a reply that never comes: no TLS handshake over https://, no
+    HTTP response over http://. The socket closes after 5 seconds, which resets
+    the connection, so a client with no timeout fails instead of hanging the suite.
+    """
+    sock = socket.socket()
+    sock.bind(("127.0.0.1", 0))
+    sock.listen()
+    safety_net = threading.Timer(5, sock.close)
+    safety_net.start()
+    yield sock.getsockname()[1]
+    safety_net.cancel()
+    sock.close()
+
+
+@pytest.fixture
+def short_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Cut every POST's (connect, read) timeout to half a second.
+
+    The constant lives in oauth_helper. run_alert re-runs better_webhook.py,
+    which binds it afresh from there; the imported better_webhook module keeps
+    its own binding, so that one is patched too.
+    """
+    import better_webhook
+    import oauth_helper
+
+    for module in (oauth_helper, better_webhook):
+        monkeypatch.setattr(module, "REQUEST_TIMEOUT", (0.5, 0.5))
 
 
 @pytest.fixture

@@ -10,6 +10,12 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "lib"))
 from log_redaction import register_secret
 from loguru import logger
 
+# Seconds to wait for a connection, then for each read of the reply, on both of
+# the alert action's POSTs: this token request and the webhook itself. They run
+# one after the other inside Splunk's 5-minute alert maxtime, and the worst case
+# (2 x 70s) leaves the action time to log why it gave up before Splunk kills it.
+REQUEST_TIMEOUT = (10, 60)
+
 
 class OAuthTokenError(Exception):
     """The token endpoint couldn't be reached or didn't hand back a usable token."""
@@ -40,7 +46,10 @@ def get_oauth_headers(
 
     try:
         resp = requests.post(
-            token_url, data=payload, auth=(client_id, client_secret), timeout=300
+            token_url,
+            data=payload,
+            auth=(client_id, client_secret),
+            timeout=REQUEST_TIMEOUT,
         )
     except requests.RequestException as exc:
         logger.error(

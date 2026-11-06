@@ -45,3 +45,16 @@ def test_a_failed_token_response_is_not_logged(
 
     assert any(line.startswith("ERROR") for line in log_lines)
     assert not any(SECRET in line for line in log_lines)
+
+
+@pytest.mark.usefixtures("short_timeout")
+def test_a_token_endpoint_that_never_answers_times_out(
+    silent_receiver: int, log_lines: list[str]
+) -> None:
+    """The token request runs inside Splunk's alert maxtime too, before the webhook."""
+    with pytest.raises(OAuthTokenError):
+        get_oauth_headers(
+            "client", "client-secret", f"https://127.0.0.1:{silent_receiver}/token"
+        )
+
+    assert any("timed out" in line for line in log_lines)
