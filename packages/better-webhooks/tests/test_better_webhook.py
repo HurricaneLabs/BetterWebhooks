@@ -401,6 +401,25 @@ def test_a_header_value_http_cannot_encode_fails_the_delivery(
     assert any("UnicodeEncodeError" in line for line in log_lines)
 
 
+@pytest.mark.parametrize("port", ["80a", "99999"])
+def test_a_proxy_url_that_does_not_parse_keeps_its_password_out_of_the_log(
+    log_lines: list[str], port: str
+) -> None:
+    """requests quotes the whole proxy URL, password included, when its port won't parse."""
+    delivered = send_webhook_request(
+        WEBHOOK_URL,
+        b"{}",
+        {},
+        None,
+        user_agent="Splunk",
+        proxy=f"http://user:{URL_PASSWORD_SECRET}@proxy.example:{port}",
+    )
+
+    assert delivered is False
+    assert any("InvalidURL" in line for line in log_lines)
+    assert not any(URL_PASSWORD_SECRET in line for line in log_lines)
+
+
 @pytest.mark.usefixtures("short_timeout")
 def test_a_receiver_that_never_answers_fails_the_alert_with_a_timeout(
     run_alert: Callable, silent_receiver: int

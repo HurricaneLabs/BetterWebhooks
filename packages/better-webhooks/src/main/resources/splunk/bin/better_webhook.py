@@ -86,6 +86,8 @@ def send_webhook_request(
     register_url(url)
 
     if proxy:
+        # requests quotes the whole proxy URL, password and all, when it won't parse
+        register_url(proxy)
         proxies = {
             "http": proxy,
             "https": proxy,
