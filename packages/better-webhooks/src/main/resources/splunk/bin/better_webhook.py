@@ -2,12 +2,13 @@
 Lovingly adapted from the original "alert_webhook" app which ships with Splunk.
 """
 
+from __future__ import annotations
+
 import json
 import os
 import re
 import sys
 import traceback
-from typing import Union
 from urllib.parse import quote, urlparse
 
 import requests
@@ -63,7 +64,7 @@ def send_webhook_request(
     url: str,
     body: bytes,
     headers: dict,
-    auth: Union[tuple, None],
+    auth: tuple | None,
     user_agent: str,
     proxy: str,
     body_failure_regex: str = "",

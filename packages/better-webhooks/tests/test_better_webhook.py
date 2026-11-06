@@ -1,7 +1,9 @@
 """End-to-end tests of the alert action: settings in on stdin, log out on stderr."""
 
+from __future__ import annotations
+
 import json
-from typing import Callable, Optional
+from typing import Callable
 
 import pytest
 import responses
@@ -18,9 +20,7 @@ RESPONSE_SECRET = "SEKRET-response-4b7f"
 CREDENTIAL_SECRET = "SEKRET-credential-e03a"
 
 
-def alert_settings(
-    credential: Optional[str] = None, body_failure_regex: str = ""
-) -> dict:
+def alert_settings(credential: str | None = None, body_failure_regex: str = "") -> dict:
     """Build the JSON payload Splunk passes an alert action on stdin."""
     return {
         "session_key": "session-key",

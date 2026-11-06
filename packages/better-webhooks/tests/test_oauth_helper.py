@@ -1,7 +1,6 @@
 """Tests for fetching an OAuth client-credentials token."""
 
 import json
-from typing import List
 
 import pytest
 import responses
@@ -35,7 +34,7 @@ def test_refuses_a_token_url_that_is_not_https(token_url: str) -> None:
     ],
 )
 def test_a_failed_token_response_is_not_logged(
-    status: int, body: str, log_lines: List[str]
+    status: int, body: str, log_lines: list[str]
 ) -> None:
     """The token endpoint's reply can carry tokens, so only its status is logged."""
     responses.post("https://idp.example/token", body=body, status=status)
