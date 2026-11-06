@@ -63,6 +63,14 @@ describe('WebhookCredentials', () => {
         expect(screen.queryByText(/No credentials found/)).not.toBeInTheDocument();
     });
 
+    it('shows the default message when the load error is not JSON', async () => {
+        splunkd.badGateway.GET = true;
+        render(<WebhookCredentials />);
+        expect(
+            await screen.findByText(/An error occurred while getting credentials/)
+        ).toBeInTheDocument();
+    });
+
     // #28: the list reloaded while the DELETE was still in flight, so the row stayed.
     it('removes a deleted credential from the list', async () => {
         let finishDelete;

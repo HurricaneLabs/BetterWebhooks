@@ -1,5 +1,14 @@
 import { getDefaultFetchInit, handleResponse, handleError } from '@splunk/splunk-utils/fetch';
 
+// handleError only catches a synchronous throw from res.json(), so an error body that
+// isn't JSON (a proxy's HTML 502, say) rejects with a SyntaxError. Show the default instead.
+function handleErrorBody(defaultMessage) {
+    return (error) =>
+        handleError(defaultMessage)(error).catch((err) =>
+            Promise.reject(err instanceof SyntaxError ? new Error(defaultMessage) : err)
+        );
+}
+
 export async function getApps() {
     const appsEndpoint = '/en-US/splunkd/__raw/services/apps/local?output_mode=json&count=0';
 
@@ -29,7 +38,7 @@ export async function getCredentials() {
         const creds = await handleResponse(200)(resp);
         return creds;
     } catch (error) {
-        return handleError('An error occurred while getting credentials')(error);
+        return handleErrorBody('An error occurred while getting credentials')(error);
     }
 }
 
@@ -69,7 +78,7 @@ export async function saveExistingCredential(credential, name) {
         const processedResp = await handleResponse(200)(resp);
         return processedResp;
     } catch (error) {
-        return handleError('An error occurred while updating existing credential')(error);
+        return handleErrorBody('An error occurred while updating existing credential')(error);
     }
 }
 
@@ -87,7 +96,7 @@ export async function deleteCredential(name, app) {
         await handleResponse(200)(resp);
         return { success: true };
     } catch (error) {
-        return handleError('An error occurred while deleting credential')(error);
+        return handleErrorBody('An error occurred while deleting credential')(error);
     }
 }
 

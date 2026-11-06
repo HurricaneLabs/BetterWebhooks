@@ -150,6 +150,17 @@ describe.each(requestModals)('%sCredentialModal request', (label, method, submit
         const reopened = await screen.findByRole('dialog');
         expect(within(reopened).queryByText('Insufficient permissions')).not.toBeInTheDocument();
     });
+
+    // A proxy in front of splunkd can answer with an HTML error page, which isn't JSON.
+    it('shows the default message when the error is not JSON', async () => {
+        const defaultMessage = {
+            POST: 'An error occurred while updating existing credential',
+            DELETE: 'An error occurred while deleting credential',
+        }[method];
+        splunkd.badGateway[method] = true;
+        const { dialog } = await submit();
+        expect(await within(dialog).findByText(defaultMessage)).toBeVisible();
+    });
 });
 
 describe('EditCredentialModal', () => {

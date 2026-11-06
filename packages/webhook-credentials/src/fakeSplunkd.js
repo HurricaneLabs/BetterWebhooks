@@ -32,7 +32,8 @@ function toEntry({ name, app, sharing, owner, ...secret }) {
  * Makes a fake splunkd holding the given credentials.
  *
  * Set `fail[method]` to an error message to make every storage/passwords request with
- * that method answer 500 with that message. Set `deleteGate` to a promise to hold each
+ * that method answer 500 with that message. Set `badGateway[method]` to make it answer 502
+ * with an HTML page, as a proxy in front of splunkd does. Set `deleteGate` to a promise to hold each
  * DELETE until it resolves; the row is removed only then, as in splunkd.
  */
 export default function fakeSplunkd(credentials = []) {
@@ -43,7 +44,7 @@ export default function fakeSplunkd(credentials = []) {
         ...cred,
     }));
 
-    const splunkd = { requests: [], fail: {}, deleteGate: null };
+    const splunkd = { requests: [], fail: {}, badGateway: {}, deleteGate: null };
 
     splunkd.fetch = async (url, init = {}) => {
         const method = init.method || 'GET';
@@ -60,6 +61,9 @@ export default function fakeSplunkd(credentials = []) {
         }
         if (!url.includes('/storage/passwords')) {
             return reply(404, {}, asJson);
+        }
+        if (splunkd.badGateway[method]) {
+            return reply(502, null, false);
         }
         if (splunkd.fail[method]) {
             return reply(
