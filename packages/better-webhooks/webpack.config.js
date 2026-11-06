@@ -4,6 +4,9 @@ const CopyWebpackPlugin = require('copy-webpack-plugin');
 const { merge: webpackMerge } = require('webpack-merge');
 const baseConfig = require('@splunk/webpack-configs/base.config').default;
 
+// bin/build.js sets NODE_ENV=production; `yarn start` (watch) leaves it unset.
+const DEBUG = process.env.NODE_ENV !== 'production';
+
 // Set up an entry config by iterating over the files in the pages directory.
 const entries = fs
     .readdirSync(path.join(__dirname, 'src/main/webapp/pages'))
@@ -33,5 +36,7 @@ module.exports = webpackMerge(baseConfig, {
             ],
         }),
     ],
-    devtool: 'eval-source-map',
+    // Source maps only in watch builds: eval-source-map in the shipped bundle
+    // wraps every module in eval() and keeps it unminified (@splunk/create 11.0.2).
+    devtool: DEBUG ? 'eval-source-map' : false,
 });
