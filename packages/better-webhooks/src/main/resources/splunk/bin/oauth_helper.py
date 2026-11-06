@@ -1,8 +1,9 @@
-import sys
 import os
-import requests
+import sys
 import traceback
 from urllib.parse import urlparse
+
+import requests
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "lib"))
 

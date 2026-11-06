@@ -8,7 +8,7 @@ import re
 import sys
 import traceback
 from typing import Union
-from urllib.parse import urlparse, quote
+from urllib.parse import quote, urlparse
 
 import requests
 import splunk.rest  # type: ignore

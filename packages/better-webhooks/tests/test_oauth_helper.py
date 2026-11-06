@@ -5,7 +5,6 @@ from typing import List
 
 import pytest
 import responses
-
 from oauth_helper import get_oauth_headers
 
 SECRET = "SEKRET-oauth-5d1e"
