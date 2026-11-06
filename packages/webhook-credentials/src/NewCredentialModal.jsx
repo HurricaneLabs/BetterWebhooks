@@ -13,6 +13,7 @@ import ControlGroup from '@splunk/react-ui/ControlGroup';
 import { saveNewCredential, updateSharing, getApps } from './http_utils';
 
 import GenericCredForm from './CredentialForms';
+import { ModalForm } from './WebhookCredentialsStyles';
 
 const iconProps = { width: 20, height: 20 };
 
@@ -104,7 +105,7 @@ function NewCredentialModal(props) {
                 returnFocus={modalToggle}
                 style={{ width: '600px' }}
             >
-                <form onSubmit={handleSubmit}>
+                <ModalForm onSubmit={handleSubmit}>
                     <Modal.Header title="New credential" icon={<Layout {...iconProps} />} />
 
                     <Modal.Body>
@@ -192,7 +193,7 @@ function NewCredentialModal(props) {
 
                         <Button appearance="primary" label="Submit" type="submit" />
                     </Modal.Footer>
-                </form>
+                </ModalForm>
             </Modal>
         </>
     );

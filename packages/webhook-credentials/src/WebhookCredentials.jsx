@@ -46,26 +46,34 @@ const WebhookCredentials = () => {
     const [credentials, setCredentials] = useState([]);
     const [error, setError] = useState();
 
+    // Children call setLoaded(false) to ask for a reload. Load only then: setting it back
+    // to true re-runs this effect, which must not fetch a second time.
     useEffect(() => {
+        if (loaded) {
+            return;
+        }
         async function getAndFormatCredentials() {
-            const creds = await getCredentials();
-            const filtered = creds.entry
-                .filter((entry) => {
-                    // Skip credentials from other realms
-                    return 'realm' in entry.content && entry.content.realm === 'better_webhooks';
-                })
-                .map((entry) => {
-                    const formatted = formatCredential(entry);
-                    return formatted;
-                });
-            setCredentials(filtered);
+            try {
+                const creds = await getCredentials();
+                const filtered = creds.entry
+                    .filter((entry) => {
+                        // Skip credentials from other realms
+                        return (
+                            'realm' in entry.content && entry.content.realm === 'better_webhooks'
+                        );
+                    })
+                    .map((entry) => {
+                        const formatted = formatCredential(entry);
+                        return formatted;
+                    });
+                setCredentials(filtered);
+                setError(undefined);
+            } catch (err) {
+                setError(err.message || String(err));
+            }
+            setLoaded(true);
         }
-        try {
-            getAndFormatCredentials();
-        } catch (err) {
-            setError(err.message || String(err));
-        }
-        setLoaded(true);
+        getAndFormatCredentials();
     }, [loaded]);
 
     return (
@@ -106,6 +114,7 @@ const WebhookCredentials = () => {
                                     name={cred.name}
                                     type={cred.type}
                                     cred={cred}
+                                    setLoaded={setLoaded}
                                 />
                             </Table.Cell>
                             <Table.Cell>

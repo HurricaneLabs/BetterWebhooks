@@ -10,6 +10,7 @@ import Text from '@splunk/react-ui/Text';
 import GenericCredForm from './CredentialForms';
 
 import { saveExistingCredential } from './http_utils';
+import { ModalForm } from './WebhookCredentialsStyles';
 
 function EditCredentialModal(props) {
     const modalToggle = useRef(null);
@@ -17,8 +18,12 @@ function EditCredentialModal(props) {
     const [open, setOpen] = useState(false);
 
     const [credential, setCredential] = useState(props.cred);
+    const [error, setError] = useState();
 
+    // Start from the listed credential every time, not from an earlier cancelled edit (#29).
     const handleRequestOpen = () => {
+        setCredential(props.cred);
+        setError(null);
         setOpen(true);
     };
 
@@ -33,21 +38,17 @@ function EditCredentialModal(props) {
         }
     };
 
-    // #29: dead handlers calling setters that don't exist. BWH-V2-5 removes them.
-    /* eslint-disable no-unused-vars, no-undef */
-    const handleChangeUsername = (event) => {
-        setUsername(event.target.value);
-    };
-
-    const handleChangePassword = (event) => {
-        setPassword(event.target.value);
-    };
-    /* eslint-enable no-unused-vars, no-undef */
-
-    const handleSubmit = (event) => {
+    // Close and reload only once splunkd confirms the save; on failure, stay open and
+    // say why. The reload keeps props.cred current for the next open.
+    const handleSubmit = async (event) => {
         event.preventDefault();
-        saveExistingCredential(credential, props.name);
-        setOpen(false);
+        try {
+            await saveExistingCredential(credential, props.name);
+            setOpen(false);
+            props.setLoaded(false);
+        } catch (err) {
+            setError(err.message || String(err));
+        }
     };
 
     return (
@@ -59,7 +60,7 @@ function EditCredentialModal(props) {
                 returnFocus={modalToggle}
                 style={{ width: '600px' }}
             >
-                <form onSubmit={handleSubmit}>
+                <ModalForm onSubmit={handleSubmit}>
                     <Modal.Header
                         title="Edit credential"
                         icon={<Layout width={20} height={20} />}
@@ -73,6 +74,7 @@ function EditCredentialModal(props) {
                             type={props.type}
                             cred={credential}
                             setCredential={setCredential}
+                            error={error}
                         />
                     </Modal.Body>
                     <Modal.Footer>
@@ -84,7 +86,7 @@ function EditCredentialModal(props) {
 
                         <Button appearance="primary" label="Submit" type="submit" />
                     </Modal.Footer>
-                </form>
+                </ModalForm>
             </Modal>
         </>
     );
@@ -94,6 +96,7 @@ EditCredentialModal.propTypes = {
     name: PropTypes.string.isRequired,
     type: PropTypes.string,
     cred: PropTypes.object.isRequired,
+    setLoaded: PropTypes.func.isRequired,
 };
 
 export default EditCredentialModal;
