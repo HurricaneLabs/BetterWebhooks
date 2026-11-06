@@ -1,8 +1,8 @@
-import sys
-import os
-import time
 import hashlib
 import hmac
+import os
+import sys
+import time
 from base64 import b64encode
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "lib"))
@@ -37,7 +37,6 @@ def get_hmac_headers(
         timestamp = str(time.time())
         headers[hmac_time_header] = timestamp
         body += timestamp.encode()
-
 
     hash_func = HASH_FUNCTION_MAP.get(hmac_hash_function)
     if hash_func is None:

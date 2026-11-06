@@ -2,19 +2,20 @@
 Lovingly adapted from the original "alert_webhook" app which ships with Splunk.
 """
 
+from __future__ import annotations
+
 import json
 import os
 import re
 import sys
 import traceback
-from typing import Union
-from urllib.parse import urlparse, quote
+from urllib.parse import quote, urlparse
 
 import requests
 import splunk.rest  # type: ignore
 from hmac_helper import get_hmac_headers
 from log_redaction import register_secret
-from oauth_helper import get_oauth_headers
+from oauth_helper import OAuthTokenError, get_oauth_headers
 from splunk.clilib import cli_common as cli  # type: ignore
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "lib"))
@@ -27,6 +28,10 @@ logger.add(sys.stderr, format="{level} {message}", level="DEBUG")
 # Credential fields that hold a secret, across every credential type. A new
 # secret field must be added here, or it can reach the log in an exception.
 SECRET_FIELDS = ("password", "header_value", "hmac_secret", "oauth_client_secret")
+
+
+class CredentialError(Exception):
+    """splunkd wouldn't hand back the stored credential."""
 
 
 def get_credential(name: str, session_key: str):
@@ -50,7 +55,7 @@ def get_credential(name: str, session_key: str):
             name,
             str(server_response),
         )
-        raise Exception("Error grabbing credential from splunkd")
+        raise CredentialError("Error grabbing credential from splunkd")
 
     # The server response is JSON-encoded
     credential = json.loads(server_content)["entry"][0]["content"]["clear_password"]
@@ -63,7 +68,7 @@ def send_webhook_request(
     url: str,
     body: bytes,
     headers: dict,
-    auth: Union[tuple, None],
+    auth: tuple | None,
     user_agent: str,
     proxy: str,
     body_failure_regex: str = "",
@@ -135,7 +140,10 @@ def send_webhook_request(
             )
             return False
 
-    except Exception:
+    # A failed delivery: network, TLS, proxy and HTTP errors, plus a header value
+    # http.client can't encode (not latin-1), which isn't a RequestException.
+    # Anything else is a bug and goes to the top-level handler.
+    except (requests.RequestException, UnicodeEncodeError):
         logger.error(
             "Unhandled exception when attempting to execute alert action. {}",
             traceback.format_exc(),
@@ -223,7 +231,8 @@ if __name__ == "__main__":
                     hmac_sig_header=hmac_sig_header,
                     hmac_time_header=hmac_time_header,
                 )
-            except Exception:
+            # An unknown hash function or digest type
+            except ValueError:
                 logger.error(
                     "Failed to compute HMAC signature, cannot send webhook. {}",
                     traceback.format_exc(),
@@ -243,7 +252,8 @@ if __name__ == "__main__":
                     token_url=oauth_token_url,
                     scope=oauth_scope,
                 )
-            except Exception:
+            # ValueError: the token URL isn't HTTPS
+            except (OAuthTokenError, ValueError):
                 logger.error(
                     "Failed to obtain OAuth token for credential {}, cannot send webhook. {}",
                     credential_name,
@@ -271,7 +281,10 @@ if __name__ == "__main__":
             body_failure_regex=body_failure_regex,
         ):
             sys.exit(2)
-    except Exception:
+    # Blind on purpose: past this point Python's own handler prints the traceback,
+    # unredacted. Keep format_exc() in the message, too: logger.exception() puts
+    # the traceback outside the message, where log_redaction can't scrub it.
+    except Exception:  # noqa: BLE001
         logger.error(
             "Unhandled exception when attempting to execute alert action. {}",
             traceback.format_exc(),

@@ -5,13 +5,16 @@ The scripts under ``bin/`` only run inside Splunk: ``better_webhook.py`` imports
 stubbed here, before any test imports a script, so the tests run on plain Python.
 """
 
+from __future__ import annotations
+
 import io
 import json
 import runpy
 import sys
 import types
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Callable, Iterator, List, Optional
+from typing import Callable
 
 import pytest
 
@@ -28,7 +31,7 @@ BIN = (
 # tests and the scripts share one logger.
 sys.path.insert(0, str(BIN.parent / "lib"))
 
-from loguru import logger  # noqa: E402
+from loguru import logger
 
 
 def _stub_splunk() -> None:
@@ -69,9 +72,9 @@ def _isolate_logging() -> Iterator[None]:
 
 
 @pytest.fixture
-def log_lines() -> Iterator[List[str]]:
+def log_lines() -> Iterator[list[str]]:
     """Collect every log line, at DEBUG and up, as the alert action would write it."""
-    lines: List[str] = []
+    lines: list[str] = []
     logger.add(lines.append, format="{level} {message}", level="DEBUG")
     yield lines
 
@@ -79,14 +82,14 @@ def log_lines() -> Iterator[List[str]]:
 @pytest.fixture
 def run_alert(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
-) -> Callable[..., "AlertRun"]:
+) -> Callable[..., AlertRun]:
     """Run ``better_webhook.py --execute`` the way Splunk does, in this process.
 
     The settings go in on stdin, the credential comes back from the stubbed
     ``storage/passwords`` call, and the log is whatever the script writes to stderr.
     """
 
-    def run(settings: dict, credential: Optional[dict] = None) -> "AlertRun":
+    def run(settings: dict, credential: dict | None = None) -> AlertRun:
         def simple_request(url: str, getargs: dict, sessionKey: str) -> tuple:
             content = {
                 "entry": [{"content": {"clear_password": json.dumps(credential)}}]

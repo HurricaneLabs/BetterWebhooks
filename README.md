@@ -40,7 +40,7 @@ into Splunk or submit to Splunkbase.
 
 ```bash
 pip install ruff==0.16.7  # keep in sync with .github/workflows/ci.yml
-ruff check packages/better-webhooks/src/main/resources/splunk/bin/
+ruff check packages/better-webhooks/src/main/resources/splunk/bin/ packages/better-webhooks/tests/
 ```
 
 ### Splunk AppInspect
