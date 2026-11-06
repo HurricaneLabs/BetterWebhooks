@@ -81,6 +81,13 @@ describe('WebhookCredentials', () => {
         fireEvent.click(await screen.findByRole('button', { name: 'Delete' }));
         const dialog = await screen.findByRole('dialog');
         fireEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
+        await waitFor(() =>
+            expect(splunkd.requests.some(({ method }) => method === 'DELETE')).toBe(true)
+        );
+        // While the DELETE is in flight: no reload yet, and the dialog stays open.
+        expect(credentialReads()).toHaveLength(1);
+        expect(screen.getByText('smoketest')).toBeInTheDocument();
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
         finishDelete();
         await waitForElementToBeRemoved(() => screen.queryByText('smoketest'));
         expect(screen.getByText(/No credentials found/)).toBeInTheDocument();
