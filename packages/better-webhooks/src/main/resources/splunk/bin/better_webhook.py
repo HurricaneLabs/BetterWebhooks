@@ -17,6 +17,7 @@ from hmac_helper import get_hmac_headers
 from log_redaction import register_secret
 from oauth_helper import REQUEST_TIMEOUT, OAuthTokenError, get_oauth_headers
 from splunk.clilib import cli_common as cli  # type: ignore
+from urllib3.exceptions import ReadTimeoutError
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "lib"))
 
@@ -147,13 +148,18 @@ def send_webhook_request(
             )
             return False
 
-    # Its own line, so a receiver that never answers reads as a timeout, not a crash
-    except requests.Timeout as exc:
-        logger.error("Webhook request to url={} timed out, giving up: {}", url, exc)
     # A failed delivery: network, TLS, proxy and HTTP errors, plus a header value
     # http.client can't encode (not latin-1), which isn't a RequestException.
     # Anything else is a bug and goes to the top-level handler.
-    except (requests.RequestException, UnicodeEncodeError):
+    except (requests.RequestException, UnicodeEncodeError) as exc:
+        # A timeout gets its own line, so it reads as a timeout, not a crash.
+        # requests raises a stall partway through the body as a ConnectionError
+        # wrapping urllib3's ReadTimeoutError, not as a Timeout.
+        if isinstance(exc, requests.Timeout) or (
+            exc.args and isinstance(exc.args[0], ReadTimeoutError)
+        ):
+            logger.error("Webhook request to url={} timed out, giving up: {}", url, exc)
+            return False
         logger.error(
             "Unhandled exception when attempting to execute alert action. {}",
             traceback.format_exc(),

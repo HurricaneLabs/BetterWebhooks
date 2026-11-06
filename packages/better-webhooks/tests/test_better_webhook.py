@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import http.server
 import json
+import socket
 import threading
 from collections.abc import Iterator
 from typing import Callable
@@ -299,3 +300,49 @@ def test_a_receiver_that_takes_the_post_and_never_replies_times_out(
 
     assert delivered is False
     assert any(f"Webhook request to url={url} timed out" in line for line in log_lines)
+
+
+@pytest.fixture
+def stalled_body_receiver() -> Iterator[str]:
+    """Answer the POST with headers that promise a body, never send it; yield the URL.
+
+    Everything closes after 5 seconds, so a client with no timeout fails
+    instead of hanging the suite.
+    """
+    sock = socket.socket()
+    sock.bind(("127.0.0.1", 0))
+    sock.listen()
+    conns: list[socket.socket] = []
+
+    def answer() -> None:
+        conn, _ = sock.accept()
+        conns.append(conn)
+        conn.recv(65536)
+        conn.sendall(b"HTTP/1.1 200 OK\r\nContent-Length: 100\r\n\r\n")
+
+    def close_all() -> None:
+        for s in (sock, *conns):
+            s.close()
+
+    threading.Thread(target=answer, daemon=True).start()
+    safety_net = threading.Timer(5, close_all)
+    safety_net.start()
+    yield f"http://127.0.0.1:{sock.getsockname()[1]}/webhook"
+    safety_net.cancel()
+    close_all()
+
+
+@pytest.mark.usefixtures("short_timeout")
+def test_a_receiver_that_stalls_partway_through_its_reply_times_out(
+    stalled_body_receiver: str, log_lines: list[str]
+) -> None:
+    """requests raises a stall in the body as a ConnectionError, not a Timeout."""
+    delivered = send_webhook_request(
+        stalled_body_receiver, b"{}", {}, None, user_agent="Splunk", proxy=""
+    )
+
+    assert delivered is False
+    assert any(
+        f"Webhook request to url={stalled_body_receiver} timed out" in line
+        for line in log_lines
+    )
