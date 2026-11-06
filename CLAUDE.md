@@ -14,7 +14,7 @@ BetterWebhooks is a Splunk app providing an enhanced webhook alert action (adapt
 - `uv run pytest` — Python unit tests for the alert action (`packages/better-webhooks/tests/`; config and dev deps in the root `pyproject.toml`)
 - `splunk-appinspect inspect BetterWebhooks.spl --mode precert` — Splunkbase validation (build the SPL first)
 
-CI (`.github/workflows/`): `ci.yml` runs ruff, pytest, the JS unit tests, JS lint (`yarn run lint`, failing on any warning) + prettier check (`format:verify`) and AppInspect on every push/PR; `build-spl.yml` builds the `.spl` artifact and attaches it to releases.
+CI (`.github/workflows/`): `ci.yml` runs ruff, pytest on Python 3.9 and 3.13 (the app requires Splunk 10.0+, which runs the alert action on 3.9 before 10.2 and on 3.13 from 10.2; locally `uv run --python 3.9 pytest`), the JS unit tests, JS lint (`yarn run lint`, failing on any warning) + prettier check (`format:verify`) and AppInspect on every push/PR; `build-spl.yml` builds the `.spl` artifact and attaches it to releases.
 
 ## Architecture
 
