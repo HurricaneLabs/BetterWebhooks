@@ -227,6 +227,35 @@ def test_an_hmac_credential_that_cannot_sign_fails_the_alert_unsent(
     assert CREDENTIAL_SECRET not in run.log
 
 
+@responses.activate
+@pytest.mark.parametrize("status", [301, 302, 303, 307, 308])
+def test_a_redirect_fails_the_alert_and_nothing_follows_it(
+    run_alert: Callable, status: int
+) -> None:
+    """requests strips only Authorization on a redirect, so a custom header would follow it.
+
+    After a 301, 302 or 303 requests resends a bodyless GET, so the alert was
+    never delivered; after a 307 or 308 it resends the POST, search results and all.
+    """
+    redirect_target = "http://collector.example/webhook"
+    responses.post(WEBHOOK_URL, status=status, headers={"Location": redirect_target})
+    # Both methods, so a followed redirect lands as a recorded call, not an error
+    responses.get(redirect_target, body="ok")
+    responses.post(redirect_target, body="ok")
+    credential = {
+        "type": "header",
+        "header_name": "X-Api-Key",
+        "header_value": CREDENTIAL_SECRET,
+    }
+
+    run = run_alert(alert_settings(credential="better_webhooks:cred:"), credential)
+
+    assert [call.request.url for call in responses.calls] == [WEBHOOK_URL]
+    assert run.exit_code == 2
+    assert f"redirect (HTTP status={status})" in run.log
+    assert CREDENTIAL_SECRET not in run.log
+
+
 class _OkHandler(http.server.BaseHTTPRequestHandler):
     """A webhook receiver that accepts every POST."""
 

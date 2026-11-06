@@ -39,6 +39,19 @@ under Splunk's 5-minute limit for an alert action (``maxtime``), so a receiver
 that stops answering fails with a logged reason before Splunk stops the action.
 A receiver that keeps sending its reply slowly can still run into ``maxtime``.
 
+Redirects
+---------
+
+The alert action doesn't follow redirects. A receiver that answers with one
+(HTTP 301, 302, 303, 307 or 308) fails the alert with an error like::
+
+    Webhook receiver answered with a redirect (HTTP status=301), which is not followed: set the alert's URL to the address it redirects to
+
+Following it would send a Custom HTTP Header credential, and for a 307 or 308 the
+search results too, to wherever the receiver points, including a plain ``http://``
+address. To find the new address, request the URL yourself, for example with
+``curl -si -X POST <url>``, and read the ``Location`` header.
+
 SSL Certificate Errors (Internal / Private CA)
 -----------------------------------------------
 
