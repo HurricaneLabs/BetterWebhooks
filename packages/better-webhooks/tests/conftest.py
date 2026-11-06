@@ -31,7 +31,7 @@ BIN = (
 # tests and the scripts share one logger.
 sys.path.insert(0, str(BIN.parent / "lib"))
 
-from loguru import logger  # noqa: E402
+from loguru import logger
 
 
 def _stub_splunk() -> None:
