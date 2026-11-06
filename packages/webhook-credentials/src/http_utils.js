@@ -20,7 +20,7 @@ export async function getApps() {
         const apps = await handleResponse(200)(resp);
         return apps.entry.map(({ name }) => name);
     } catch (error) {
-        return handleError('An error occurred while getting apps')(error);
+        return handleErrorBody('An error occurred while getting apps')(error);
     }
 }
 
@@ -58,7 +58,7 @@ export async function saveNewCredential(credential, name, app) {
 
         return { url: processedResp.entry[0].links.edit, author: processedResp.entry[0].author };
     } catch (error) {
-        return handleError('An error occurred while saving new credential')(error);
+        return handleErrorBody('An error occurred while saving new credential')(error);
     }
 }
 
@@ -122,6 +122,6 @@ export async function updateSharing(credentialUrl, author, sharing, readPerms, w
         await handleResponse(200)(resp);
         return { success: true };
     } catch (error) {
-        return handleError('An error occurred while updating sharing')(error);
+        return handleErrorBody('An error occurred while updating sharing')(error);
     }
 }

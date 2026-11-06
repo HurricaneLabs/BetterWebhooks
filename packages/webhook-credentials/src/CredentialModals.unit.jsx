@@ -163,6 +163,18 @@ describe.each(requestModals)('%sCredentialModal request', (label, method, submit
     });
 });
 
+describe('NewCredentialModal', () => {
+    // A proxy in front of splunkd can answer with an HTML error page, which isn't JSON.
+    it('shows the default message when the save error is not JSON', async () => {
+        splunkd.badGateway.POST = true;
+        const { dialog } = await openModal(modals[0][1], 'New Credential');
+        fireEvent.click(within(dialog).getByRole('button', { name: 'Submit' }));
+        expect(
+            await within(dialog).findByText('An error occurred while saving new credential')
+        ).toBeVisible();
+    });
+});
+
 describe('EditCredentialModal', () => {
     // #29: the form was seeded from props.cred once, so a cancelled edit came back.
     it('shows the saved values, not a cancelled edit, when reopened', async () => {
