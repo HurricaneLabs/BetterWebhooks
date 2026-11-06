@@ -11,6 +11,10 @@ from log_redaction import register_secret
 from loguru import logger
 
 
+class OAuthTokenError(Exception):
+    """The token endpoint couldn't be reached or didn't hand back a usable token."""
+
+
 def get_oauth_headers(
     client_id: str, client_secret: str, token_url: str, scope: str = ""
 ):
@@ -38,13 +42,13 @@ def get_oauth_headers(
         resp = requests.post(
             token_url, data=payload, auth=(client_id, client_secret), timeout=300
         )
-    except requests.RequestException:
+    except requests.RequestException as exc:
         logger.error(
             "OAuth token request to {} failed with exception:\n{}",
             token_url,
             traceback.format_exc(),
         )
-        raise Exception("OAuth token request failed (network error)")
+        raise OAuthTokenError("OAuth token request failed (network error)") from exc
 
     logger.debug("OAuth token endpoint responded with status={}", resp.status_code)
 
@@ -55,18 +59,19 @@ def get_oauth_headers(
             resp.status_code,
             token_url,
         )
-        raise Exception(f"OAuth token request failed: HTTP {resp.status_code}")
+        raise OAuthTokenError(f"OAuth token request failed: HTTP {resp.status_code}")
 
     try:
         j = resp.json()
-    except ValueError:
+    except ValueError as exc:
         logger.error("OAuth token response from {} is not valid JSON", token_url)
-        raise Exception("OAuth token response is not valid JSON")
+        raise OAuthTokenError("OAuth token response is not valid JSON") from exc
 
-    access_token = j.get("access_token")
+    # Valid JSON can still be a list or a bare string, which has no .get()
+    access_token = j.get("access_token") if isinstance(j, dict) else None
     if not access_token:
         logger.error("OAuth token response from {} has no access_token", token_url)
-        raise Exception("OAuth token missing in response")
+        raise OAuthTokenError("OAuth token missing in response")
     register_secret(access_token)
 
     logger.info("Successfully obtained OAuth access token for client_id={}", client_id)

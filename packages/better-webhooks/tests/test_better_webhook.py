@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import http.server
 import json
+import threading
+from collections.abc import Iterator
 from typing import Callable
 
 import pytest
 import responses
+from better_webhook import send_webhook_request
 from loguru import logger
 
 WEBHOOK_URL = "https://hooks.example.com/webhook"
@@ -198,3 +202,70 @@ def test_an_http_oauth_token_url_fails_the_alert_before_anything_is_sent(
     assert "must use HTTPS" in run.log
     assert "my_oauth" in run.log
     assert CREDENTIAL_SECRET not in run.log
+
+
+@responses.activate
+def test_an_hmac_credential_that_cannot_sign_fails_the_alert_unsent(
+    run_alert: Callable,
+) -> None:
+    """An unknown hash function stops the alert before anything is sent."""
+    responses.post(WEBHOOK_URL, body="ok")
+    credential = {
+        "type": "hmac",
+        "hmac_secret": CREDENTIAL_SECRET,
+        "hmac_hash_function": "md5",
+        "hmac_digest_type": "hex",
+        "hmac_sig_header": "X-Sig",
+    }
+
+    run = run_alert(alert_settings(credential="better_webhooks:cred:"), credential)
+
+    assert run.exit_code == 2
+    assert "Failed to compute HMAC signature" in run.log
+    assert len(responses.calls) == 0
+    assert CREDENTIAL_SECRET not in run.log
+
+
+class _OkHandler(http.server.BaseHTTPRequestHandler):
+    """A webhook receiver that accepts every POST."""
+
+    def do_POST(self) -> None:
+        """Read the body and answer 200."""
+        self.rfile.read(int(self.headers.get("Content-Length", 0)))
+        self.send_response(200)
+        self.end_headers()
+
+    def log_message(self, *args: object) -> None:
+        """Keep the server quiet."""
+
+
+@pytest.fixture
+def local_receiver() -> Iterator[str]:
+    """Serve a real HTTP receiver on localhost and yield its URL.
+
+    responses stubs out the HTTP adapter, so headers never reach http.client and a
+    header it can't encode would go through. This receiver puts it back in the path.
+    """
+    server = http.server.HTTPServer(("127.0.0.1", 0), _OkHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    yield f"http://127.0.0.1:{server.server_port}/webhook"
+    server.shutdown()
+    server.server_close()
+
+
+def test_a_header_value_http_cannot_encode_fails_the_delivery(
+    local_receiver: str, log_lines: list[str]
+) -> None:
+    """http.client refuses a non-latin-1 header value with UnicodeEncodeError, not a RequestException."""
+    delivered = send_webhook_request(
+        local_receiver,
+        b"{}",
+        {"X-Api-Key": "caf\u2603"},
+        None,
+        user_agent="Splunk",
+        proxy="",
+    )
+
+    assert delivered is False
+    assert any("UnicodeEncodeError" in line for line in log_lines)
