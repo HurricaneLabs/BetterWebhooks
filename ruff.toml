@@ -1,3 +1,7 @@
+# Vendored third-party code (loguru): not ours to lint, so a bare `ruff check`
+# from the repo root covers only our own Python.
+extend-exclude = ["packages/better-webhooks/src/main/resources/splunk/lib"]
+
 [lint]
 # Pin the rule set explicitly. Ruff's defaults change between releases, and
 # only CI pins the ruff version, so relying on them lets a local run and CI
