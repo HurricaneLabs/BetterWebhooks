@@ -1,12 +1,69 @@
 """Tests for fetching an OAuth client-credentials token."""
 
 import json
+from contextlib import AbstractContextManager, nullcontext
 
 import pytest
 import responses
 from oauth_helper import OAuthTokenError, get_oauth_headers
 
 SECRET = "SEKRET-oauth-5d1e"
+
+# Markers for the token URL's path, query and user:password@, which can each
+# carry a secret (an API key in the query, credentials in the userinfo).
+TOKEN_URL_SECRETS = (
+    "SEKRET-token-url-path-41b0",
+    "SEKRET-token-url-query-9d2c",
+    "SEKRET-token-url-password-e7f5",
+)
+
+
+def secret_token_url(host: str, scheme: str = "https") -> str:
+    """Build a token URL with a secret in its userinfo, path and query."""
+    path, query, password = TOKEN_URL_SECRETS
+    return f"{scheme}://client:{password}@{host}/token/{path} é?key={query}"
+
+
+def test_a_refused_token_url_stays_out_of_the_log(log_lines: list[str]) -> None:
+    """The HTTPS refusal names the scheme, not the URL it refuses."""
+    with pytest.raises(ValueError, match="HTTPS"):
+        get_oauth_headers(
+            "client", "client-secret", secret_token_url("idp.example", scheme="http")
+        )
+
+    assert any("must use HTTPS" in line for line in log_lines)
+    for secret in TOKEN_URL_SECRETS:
+        assert not any(secret in line for line in log_lines)
+
+
+@responses.activate
+@pytest.mark.parametrize(
+    ("status", "body", "outcome"),
+    [
+        pytest.param(
+            200, json.dumps({"access_token": "tok"}), nullcontext(), id="token"
+        ),
+        pytest.param(401, "", pytest.raises(OAuthTokenError), id="rejected"),
+        pytest.param(200, "<html>", pytest.raises(OAuthTokenError), id="not-json"),
+        pytest.param(200, "{}", pytest.raises(OAuthTokenError), id="no-access-token"),
+    ],
+)
+def test_the_token_url_host_is_logged_but_no_other_part_of_it(
+    status: int,
+    body: str,
+    outcome: AbstractContextManager,
+    log_lines: list[str],
+) -> None:
+    """Every line about the token request names the endpoint by its host alone."""
+    url = secret_token_url("idp.example")
+    responses.post(url, body=body, status=status)
+
+    with outcome:
+        get_oauth_headers("client", "client-secret", url)
+
+    assert any("host=idp.example" in line for line in log_lines)
+    for secret in TOKEN_URL_SECRETS:
+        assert not any(secret in line for line in log_lines)
 
 
 @responses.activate

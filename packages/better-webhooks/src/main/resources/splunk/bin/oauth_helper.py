@@ -7,7 +7,7 @@ import requests
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "lib"))
 
-from log_redaction import register_secret
+from log_redaction import register_secret, register_url, url_host
 from loguru import logger
 
 # Seconds to wait for a connection, then for each read of the reply, on both of
@@ -26,11 +26,16 @@ def get_oauth_headers(
 ):
     """
     Request a client_credentials OAuth token and return headers for the bearer token.
-    Logs status and errors; raises on failure.
+    Logs status and errors, naming the token URL by its host alone; raises on failure.
     """
+    # Its path, query or user:password@ can hold a key, and errors quote them
+    register_url(token_url)
+    host = url_host(token_url)
+
     # The client secret goes out as basic auth on this request, so never over plain HTTP
-    if urlparse(token_url).scheme != "https":
-        logger.error("OAuth token URL must use HTTPS, refusing {}", token_url)
+    scheme = urlparse(token_url).scheme
+    if scheme != "https":
+        logger.error("OAuth token URL must use HTTPS, refusing scheme={!r}", scheme)
         raise ValueError("OAuth token URL must use HTTPS")
 
     payload = {"grant_type": "client_credentials"}
@@ -38,8 +43,8 @@ def get_oauth_headers(
         payload["scope"] = scope
 
     logger.debug(
-        "Requesting OAuth token from {} for client_id={} scope={}",
-        token_url,
+        "Requesting OAuth token from host={} for client_id={} scope={}",
+        host,
         client_id,
         scope,
     )
@@ -53,8 +58,8 @@ def get_oauth_headers(
         )
     except requests.RequestException as exc:
         logger.error(
-            "OAuth token request to {} failed with exception:\n{}",
-            token_url,
+            "OAuth token request to host={} failed with exception:\n{}",
+            host,
             traceback.format_exc(),
         )
         raise OAuthTokenError("OAuth token request failed (network error)") from exc
@@ -64,22 +69,22 @@ def get_oauth_headers(
     if not (200 <= resp.status_code < 300):
         # Not the body: an error reply can still carry a token
         logger.error(
-            "Failed to obtain OAuth token: HTTP {} from {}",
+            "Failed to obtain OAuth token: HTTP {} from host={}",
             resp.status_code,
-            token_url,
+            host,
         )
         raise OAuthTokenError(f"OAuth token request failed: HTTP {resp.status_code}")
 
     try:
         j = resp.json()
     except ValueError as exc:
-        logger.error("OAuth token response from {} is not valid JSON", token_url)
+        logger.error("OAuth token response from host={} is not valid JSON", host)
         raise OAuthTokenError("OAuth token response is not valid JSON") from exc
 
     # Valid JSON can still be a list or a bare string, which has no .get()
     access_token = j.get("access_token") if isinstance(j, dict) else None
     if not access_token:
-        logger.error("OAuth token response from {} has no access_token", token_url)
+        logger.error("OAuth token response from host={} has no access_token", host)
         raise OAuthTokenError("OAuth token missing in response")
     register_secret(access_token)
 
