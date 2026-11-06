@@ -101,6 +101,9 @@ def send_webhook_request(
     )
 
     try:
+        # Never follow a redirect. requests strips only Authorization on the way,
+        # so a custom header credential would go wherever the receiver points,
+        # http:// included, and a 307/308 resends the body too.
         r = requests.post(
             url,
             data=body,
@@ -108,7 +111,16 @@ def send_webhook_request(
             auth=auth,
             proxies=proxies,
             timeout=REQUEST_TIMEOUT,
+            allow_redirects=False,
         )
+
+        # Not the Location: it can carry a secret in its path or query
+        if r.is_redirect:
+            logger.error(
+                "Webhook receiver answered with a redirect (HTTP status={}), which is not followed: set the alert's URL to the address it redirects to",
+                r.status_code,
+            )
+            return False
 
         if 200 <= r.status_code < 300:
             logger.info(
