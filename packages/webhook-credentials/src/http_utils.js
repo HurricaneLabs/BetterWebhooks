@@ -62,9 +62,12 @@ export async function saveNewCredential(credential, name, app) {
     }
 }
 
-export async function saveExistingCredential(credential, name) {
-    const passwordsEndpoint =
-        '/en-US/splunkd/__raw/servicesNS/nobody/BetterWebhooks/storage/passwords';
+/**
+ * Saves new values for a stored credential, in the app it's stored in: from any other
+ * app, splunkd can't see an App credential.
+ */
+export async function saveExistingCredential(credential, name, app) {
+    const passwordsEndpoint = `/en-US/splunkd/__raw/servicesNS/nobody/${app}/storage/passwords`;
 
     const encoded = encodeURIComponent(JSON.stringify(credential));
 

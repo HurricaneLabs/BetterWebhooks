@@ -34,6 +34,23 @@ const credentialReads = () =>
         ({ url, method }) => method === 'GET' && url.includes('/storage/passwords')
     );
 
+// Each app and sharing level the page can list a credential under. Edit and Delete have
+// to reach it in its own app: from any other, splunkd can't see an App credential.
+const storedIn = [
+    ['BetterWebhooks', 'global'],
+    ['BetterWebhooks', 'app'],
+    ['search', 'global'],
+    ['search', 'app'],
+];
+
+// Replaces the fake splunkd with one holding a single credential stored in `app`.
+function storeOne(app, sharing) {
+    splunkd = fakeSplunkd([
+        { name: 'smoketest', type: 'basic', username: 'user', password: 'pass', app, sharing },
+    ]);
+    global.fetch = splunkd.fetch;
+}
+
 // Waits for a reload of the list to finish.
 const reloaded = () =>
     waitFor(() => expect(screen.queryByText(/Loading credentials/)).not.toBeInTheDocument());
@@ -53,6 +70,21 @@ describe('WebhookCredentials', () => {
         expect(await screen.findByText('smoketest')).toBeInTheDocument();
         await reloaded();
         expect(credentialReads()).toHaveLength(1);
+    });
+
+    // Rows were keyed by name alone, so React warned and could mix the two rows up.
+    it('lists one name stored in two apps as two distinct rows', async () => {
+        const stored = { name: 'smoketest', type: 'basic', username: 'user', password: 'pass' };
+        splunkd = fakeSplunkd([stored, { ...stored, app: 'search', sharing: 'app' }]);
+        global.fetch = splunkd.fetch;
+        const consoleError = jest.spyOn(console, 'error');
+        render(<WebhookCredentials />);
+        expect(await screen.findAllByText('smoketest')).toHaveLength(2);
+        const duplicateKey = consoleError.mock.calls.filter(([message]) =>
+            String(message).includes('two children with the same key')
+        );
+        consoleError.mockRestore();
+        expect(duplicateKey).toEqual([]);
     });
 
     // The load wasn't awaited, so its error never reached the page.
@@ -93,20 +125,36 @@ describe('WebhookCredentials', () => {
         expect(screen.getByText(/No credentials found/)).toBeInTheDocument();
     });
 
+    it.each(storedIn)('deletes a credential stored in %s with %s sharing', async (app, sharing) => {
+        storeOne(app, sharing);
+        render(<WebhookCredentials />);
+        fireEvent.click(await screen.findByRole('button', { name: 'Delete' }));
+        const dialog = await screen.findByRole('dialog');
+        fireEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
+        await waitForElementToBeRemoved(() => screen.queryByText('smoketest'));
+        expect(screen.getByText(/No credentials found/)).toBeInTheDocument();
+    });
+
     // The form resets from the listed credential on open, so the list has to reload
     // after a save or reopening shows the old values.
-    it('shows the saved values when Edit is reopened after a save', async () => {
-        render(<WebhookCredentials />);
-        fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
-        const dialog = await screen.findByRole('dialog');
-        fireEvent.change(within(dialog).getByRole('textbox', { name: 'Username' }), {
-            target: { value: 'newuser' },
-        });
-        fireEvent.click(within(dialog).getByRole('button', { name: 'Submit' }));
-        await waitForElementToBeRemoved(() => screen.queryByRole('dialog'));
-        await reloaded();
-        fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
-        const reopened = await screen.findByRole('dialog');
-        expect(within(reopened).getByRole('textbox', { name: 'Username' })).toHaveValue('newuser');
-    });
+    it.each(storedIn)(
+        'shows the saved values when Edit is reopened after a save (%s, %s sharing)',
+        async (app, sharing) => {
+            storeOne(app, sharing);
+            render(<WebhookCredentials />);
+            fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+            const dialog = await screen.findByRole('dialog');
+            fireEvent.change(within(dialog).getByRole('textbox', { name: 'Username' }), {
+                target: { value: 'newuser' },
+            });
+            fireEvent.click(within(dialog).getByRole('button', { name: 'Submit' }));
+            await waitForElementToBeRemoved(() => screen.queryByRole('dialog'));
+            await reloaded();
+            fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+            const reopened = await screen.findByRole('dialog');
+            expect(within(reopened).getByRole('textbox', { name: 'Username' })).toHaveValue(
+                'newuser'
+            );
+        }
+    );
 });

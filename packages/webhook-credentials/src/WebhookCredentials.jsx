@@ -102,7 +102,7 @@ const WebhookCredentials = () => {
                 </Table.Head>
                 <Table.Body>
                     {credentials.map((cred) => (
-                        <Table.Row key={cred.name}>
+                        <Table.Row key={`${cred.app}:${cred.name}`}>
                             <Table.Cell>{cred.name}</Table.Cell>
                             <Table.Cell>{credTypeMap[cred.type]}</Table.Cell>
                             <Table.Cell>{cred.app}</Table.Cell>
@@ -112,6 +112,7 @@ const WebhookCredentials = () => {
                                 <EditCredentialModal
                                     key={cred.name}
                                     name={cred.name}
+                                    app={cred.app}
                                     type={cred.type}
                                     cred={cred}
                                     setLoaded={setLoaded}

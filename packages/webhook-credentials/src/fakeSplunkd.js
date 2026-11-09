@@ -2,8 +2,19 @@
 // replaces fetch, so the real request code in http_utils still runs. Like splunkd, it
 // answers in XML unless the request asks for output_mode=json in its URL or body, so a
 // request that forgets output_mode fails here the way it does in Splunk.
+//
+// It also follows splunkd's namespaces, as seen on Splunk 10.4. A request to
+// servicesNS/nobody/<app> sees a Global credential from any app and an App credential
+// only from its own app. It never sees a Private one, so neither does the listing.
 
 const ENTITY = /\/storage\/passwords\/better_webhooks:([^:/?]+):/;
+const NAMESPACE = /\/servicesNS\/[^/]+\/([^/]+)\/storage\/passwords/;
+
+/** Returns a test for whether a stored credential is visible from servicesNS/nobody/<app>. */
+function visibleFrom(app) {
+    return (cred) =>
+        cred.sharing === 'global' || (cred.sharing === 'app' && (app === '-' || cred.app === app));
+}
 
 function reply(status, body, asJson) {
     return {
@@ -46,12 +57,15 @@ export default function fakeSplunkd(credentials = []) {
 
     const splunkd = { requests: [], fail: {}, badGateway: {}, deleteGate: null };
 
+    /** Answers one request the way splunkd would, and records it in `requests`. */
     splunkd.fetch = async (url, init = {}) => {
         const method = init.method || 'GET';
         const body = init.body ? String(init.body) : '';
         splunkd.requests.push({ url, method, body });
         const asJson = url.includes('output_mode=json') || body.includes('output_mode=json');
-        const listing = () => reply(200, { entry: stored.map(toEntry) }, asJson);
+        const namespace = url.match(NAMESPACE);
+        const visible = visibleFrom(namespace && namespace[1]);
+        const listing = () => reply(200, { entry: stored.filter(visible).map(toEntry) }, asJson);
 
         if (url.includes('/apps/local')) {
             return reply(200, { entry: [{ name: 'BetterWebhooks' }] }, asJson);
@@ -75,8 +89,12 @@ export default function fakeSplunkd(credentials = []) {
 
         const entity = url.match(ENTITY);
         const name = entity && decodeURIComponent(entity[1]);
-        const index = stored.findIndex((cred) => cred.name === name);
+        const index = stored.findIndex((cred) => cred.name === name && visible(cred));
 
+        if (entity && index === -1) {
+            const text = `A password does not exists for id="credential:better_webhooks:${name}:"`;
+            return reply(404, { messages: [{ type: 'ERROR', text }] }, asJson);
+        }
         if (entity && method === 'DELETE') {
             await splunkd.deleteGate;
             stored.splice(index, 1);

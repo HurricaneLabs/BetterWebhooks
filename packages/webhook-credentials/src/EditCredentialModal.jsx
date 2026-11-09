@@ -43,7 +43,7 @@ function EditCredentialModal(props) {
     const handleSubmit = async (event) => {
         event.preventDefault();
         try {
-            await saveExistingCredential(credential, props.name);
+            await saveExistingCredential(credential, props.name, props.app);
             setOpen(false);
             props.setLoaded(false);
         } catch (err) {
@@ -94,6 +94,7 @@ function EditCredentialModal(props) {
 
 EditCredentialModal.propTypes = {
     name: PropTypes.string.isRequired,
+    app: PropTypes.string.isRequired,
     type: PropTypes.string,
     cred: PropTypes.object.isRequired,
     setLoaded: PropTypes.func.isRequired,
