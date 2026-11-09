@@ -72,6 +72,21 @@ describe('WebhookCredentials', () => {
         expect(credentialReads()).toHaveLength(1);
     });
 
+    // Rows were keyed by name alone, so React warned and could mix the two rows up.
+    it('lists one name stored in two apps as two distinct rows', async () => {
+        const stored = { name: 'smoketest', type: 'basic', username: 'user', password: 'pass' };
+        splunkd = fakeSplunkd([stored, { ...stored, app: 'search', sharing: 'app' }]);
+        global.fetch = splunkd.fetch;
+        const consoleError = jest.spyOn(console, 'error');
+        render(<WebhookCredentials />);
+        expect(await screen.findAllByText('smoketest')).toHaveLength(2);
+        const duplicateKey = consoleError.mock.calls.filter(([message]) =>
+            String(message).includes('two children with the same key')
+        );
+        consoleError.mockRestore();
+        expect(duplicateKey).toEqual([]);
+    });
+
     // The load wasn't awaited, so its error never reached the page.
     it('shows why loading failed', async () => {
         splunkd.fail.GET = 'Insufficient permissions';
