@@ -52,7 +52,7 @@ Remove some (accidental) whitespace in the default POST body which can break som
 parsers (thanks to Matt Anderson!)
 
 1.1.3/1.1.4
------
+-----------
 Changes requested by Splunk Cloud vetting.
 
 1.1.2

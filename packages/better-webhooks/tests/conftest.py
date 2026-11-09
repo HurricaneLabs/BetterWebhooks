@@ -132,10 +132,15 @@ def run_alert(
     """Run ``better_webhook.py --execute`` the way Splunk does, in this process.
 
     The settings go in on stdin, the credential comes back from the stubbed
-    ``storage/passwords`` call, and the log is whatever the script writes to stderr.
+    ``storage/passwords`` call, the proxy from the stubbed ``better_webhooks.conf``
+    read, and the log is whatever the script writes to stderr.
     """
 
-    def run(settings: dict, credential: dict | None = None) -> AlertRun:
+    def run(
+        settings: dict, credential: dict | None = None, proxy: str = ""
+    ) -> AlertRun:
+        """Run the alert once with ``settings``, the stored ``credential`` and the conf ``proxy``."""
+
         def simple_request(url: str, getargs: dict, sessionKey: str) -> tuple:
             content = {
                 "entry": [{"content": {"clear_password": json.dumps(credential)}}]
@@ -143,6 +148,11 @@ def run_alert(
             return {"status": "200"}, json.dumps(content)
 
         monkeypatch.setattr(sys.modules["splunk.rest"], "simpleRequest", simple_request)
+        monkeypatch.setattr(
+            sys.modules["splunk.clilib.cli_common"],
+            "getConfStanza",
+            lambda conf, stanza: {"proxy": proxy},
+        )
         monkeypatch.setattr(sys, "argv", [str(BIN / "better_webhook.py"), "--execute"])
         monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps(settings)))
 
