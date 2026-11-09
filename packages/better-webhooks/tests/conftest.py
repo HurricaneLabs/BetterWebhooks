@@ -139,6 +139,8 @@ def run_alert(
     def run(
         settings: dict, credential: dict | None = None, proxy: str = ""
     ) -> AlertRun:
+        """Run the alert once with ``settings``, the stored ``credential`` and the conf ``proxy``."""
+
         def simple_request(url: str, getargs: dict, sessionKey: str) -> tuple:
             content = {
                 "entry": [{"content": {"clear_password": json.dumps(credential)}}]
