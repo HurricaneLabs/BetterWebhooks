@@ -13,7 +13,6 @@ import sys
 from urllib.parse import urlsplit
 
 import requests
-from urllib3.exceptions import LocationParseError
 from urllib3.util import parse_url
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "lib"))
@@ -82,6 +81,11 @@ def url_parses(url: str, name: str) -> bool:
     on any scheme but http and https, so this is urllib3's check, not that one.
     Like requests, it strips leading whitespace first.
 
+    A \\ cut doesn't always make urllib3 fail: in user:pass@word\\x@host the
+    text before the \\ is a valid host, and requests would send there. Only
+    urlsplit reads past a \\ to the real host, so a \\ anywhere in its host
+    part is refused too. It's never valid there.
+
     Args:
         url: The URL.
         name: What the URL is for, as the log line names it ("webhook").
@@ -89,9 +93,14 @@ def url_parses(url: str, name: str) -> bool:
     Returns:
         True if the URL parses.
     """
+    url = url.lstrip()
     try:
-        parse_url(url.lstrip())
-    except LocationParseError:
+        parse_url(url)
+        refused = "\\" in urlsplit(url).netloc
+    # LocationParseError is a ValueError; urlsplit raises one on an unbalanced [
+    except ValueError:
+        refused = True
+    if refused:
         logger.error(
             "The {} URL won't parse, so it isn't used: check its host and port, "
             "and percent-encode any #, /, ? or \\ in its user name or password",

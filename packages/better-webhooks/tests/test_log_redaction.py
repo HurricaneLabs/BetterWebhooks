@@ -32,3 +32,22 @@ def test_a_url_with_a_leading_space_is_checked_as_requests_sends_it(
     assert url_parses(url, "webhook") is parses
     for secret in (PASSWORD_HEAD, PASSWORD_TAIL):
         assert not any(secret in line for line in log_lines)
+
+
+@pytest.mark.parametrize(
+    ("url", "parses"),
+    [
+        # Past the host, both parsers agree: requests sends it percent-encoded
+        pytest.param("https://hooks.example.com/a\\b", True, id="backslash-in-path"),
+        pytest.param(
+            "https://hooks.example.com/x?q=a\\b", True, id="backslash-in-query"
+        ),
+        # urllib3 encodes it, but urlsplit raises on it
+        pytest.param(
+            "https://svc:pa[ss@hooks.example.com/x", False, id="bracket-in-password"
+        ),
+    ],
+)
+def test_a_backslash_is_refused_only_before_the_path(url: str, parses: bool) -> None:
+    """A \\ ends urllib3's host part but not urlsplit's; after the host it's just encoded."""
+    assert url_parses(url, "webhook") is parses

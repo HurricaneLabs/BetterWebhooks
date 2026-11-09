@@ -474,6 +474,83 @@ def test_a_proxy_url_that_does_not_parse_fails_the_delivery_with_no_password_log
         assert secret not in run.log
 
 
+# urllib3 ends a URL's host part at a raw \ and urlsplit doesn't, so the text
+# before the \ reads as the host: lower case here, as urllib3 logs it. Each
+# shape is user info that a \ cuts short, ahead of the real host.
+BACKSLASH_HOST = "sekret-backslash-host-7b2e"
+BACKSLASH_PORT = "48213"
+BACKSLASH_TAIL = "sekret-backslash-tail-e61c"
+BACKSLASH_SECRETS = (BACKSLASH_HOST, BACKSLASH_PORT, BACKSLASH_TAIL)
+BACKSLASH_USER_INFO = [
+    pytest.param(f"admin:Wint3r@{BACKSLASH_HOST}", id="at-before-backslash"),
+    pytest.param(f"admin:{BACKSLASH_PORT}", id="all-digit-password-head"),
+    pytest.param(BACKSLASH_HOST, id="user-name-only"),
+]
+
+
+def backslash_url(scheme: str, user_info: str, host: str) -> str:
+    """Build a URL whose user info a raw \\ cuts short."""
+    return f"{scheme}://{user_info}\\{BACKSLASH_TAIL}@{host}/x"
+
+
+@responses.activate
+@pytest.mark.parametrize("user_info", BACKSLASH_USER_INFO)
+def test_a_webhook_url_with_a_backslash_before_its_host_is_refused(
+    run_alert: Callable, user_info: str
+) -> None:
+    """urllib3 would send to, and log, the text before the \\ as the host."""
+    settings = alert_settings()
+    settings["configuration"]["url"] = backslash_url(
+        "https", user_info, "hooks.example.com"
+    )
+
+    run = run_alert(settings)
+
+    assert run.exit_code == 2
+    assert "webhook URL won't parse" in run.log
+    assert len(responses.calls) == 0
+    for secret in BACKSLASH_SECRETS:
+        assert secret not in run.log.lower()
+
+
+@responses.activate
+@pytest.mark.parametrize("user_info", BACKSLASH_USER_INFO)
+def test_a_token_url_with_a_backslash_before_its_host_is_refused(
+    run_alert: Callable, user_info: str
+) -> None:
+    """The token request would carry the client secret to the text before the \\."""
+    credential = {
+        "type": "oauth",
+        "oauth_client_id": "client",
+        "oauth_client_secret": CREDENTIAL_SECRET,
+        "oauth_token_url": backslash_url("https", user_info, "idp.example"),
+    }
+
+    run = run_alert(alert_settings(credential="better_webhooks:cred:"), credential)
+
+    assert run.exit_code == 2
+    assert "OAuth token URL won't parse" in run.log
+    assert len(responses.calls) == 0
+    for secret in (*BACKSLASH_SECRETS, CREDENTIAL_SECRET):
+        assert secret not in run.log.lower()
+
+
+def test_a_proxy_url_with_a_backslash_before_its_host_is_refused(
+    run_alert: Callable,
+) -> None:
+    """requests would connect to the text before the \\ as the proxy, and quote it."""
+    proxy = backslash_url(
+        "http", f"admin:Wint3r@{BACKSLASH_HOST}", "proxy.example:3128"
+    )
+
+    run = run_alert(alert_settings(), proxy=proxy)
+
+    assert run.exit_code == 2
+    assert "proxy URL won't parse" in run.log
+    for secret in BACKSLASH_SECRETS:
+        assert secret not in run.log.lower()
+
+
 # urlsplit deletes the tab and finds svc:<password head> as the host; urllib3,
 # which requests parses with, keeps it and finds no host at all
 TAB_URL = f"https:/\t/svc:{PASSWORD_HEAD}#{PASSWORD_TAIL}@hooks.example.com/x"
