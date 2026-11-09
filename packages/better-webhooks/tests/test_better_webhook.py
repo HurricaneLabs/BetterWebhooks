@@ -356,6 +356,96 @@ def test_an_unreachable_token_url_stays_out_of_the_log(
         assert secret not in run.log
 
 
+class _RefusingProxy(http.server.HTTPServer):
+    """An HTTP proxy on localhost that refuses every tunnel and remembers where it led."""
+
+    def __init__(self) -> None:
+        """Bind a free localhost port."""
+        super().__init__(("127.0.0.1", 0), _RefusingProxyHandler)
+        self.requests: list[tuple[str, str]] = []
+
+
+class _RefusingProxyHandler(http.server.BaseHTTPRequestHandler):
+    """Record each CONNECT's target (host:port), then answer 403."""
+
+    # socketserver sets this once, to the _RefusingProxy that built the handler
+    server: _RefusingProxy  # ty: ignore[invalid-mutable-override]
+
+    def do_CONNECT(self) -> None:
+        """Record the tunnel's target and refuse it."""
+        self.server.requests.append((self.command, self.path))
+        self.send_response(403)
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
+    def log_message(self, format: str, *args: object) -> None:
+        """Keep the server quiet."""
+
+
+@pytest.fixture
+def refusing_proxy() -> Iterator[_RefusingProxy]:
+    """Serve a proxy on localhost that refuses everything; its ``requests`` say what it was asked.
+
+    A real socket, not responses: responses replaces the HTTP adapter's send(),
+    which is where requests picks the proxy, so under it no proxy is ever used.
+    """
+    server = _RefusingProxy()
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    yield server
+    server.shutdown()
+    server.server_close()
+
+
+def test_the_oauth_token_request_goes_through_the_proxy(
+    run_alert: Callable, refusing_proxy: _RefusingProxy, closed_port: int
+) -> None:
+    """On a host whose only way out is the proxy, a token request sent direct never arrives."""
+    # Nothing listens there, so a token request that skips the proxy is refused
+    token_url = f"https://127.0.0.1:{closed_port}/token"
+    credential = {
+        "type": "oauth",
+        "oauth_client_id": "client",
+        "oauth_client_secret": CREDENTIAL_SECRET,
+        "oauth_token_url": token_url,
+    }
+
+    run = run_alert(
+        alert_settings(credential="better_webhooks:cred:"),
+        credential,
+        proxy=f"http://127.0.0.1:{refusing_proxy.server_port}",
+    )
+
+    assert refusing_proxy.requests == [("CONNECT", f"127.0.0.1:{closed_port}")]
+    assert run.exit_code == 2
+    assert "Failed to obtain OAuth token" in run.log
+
+
+@pytest.mark.parametrize("port", ["80a", "99999"])
+def test_a_proxy_url_that_does_not_parse_keeps_its_password_out_of_the_token_step_log(
+    run_alert: Callable, port: str
+) -> None:
+    """The token request runs before the webhook, so its error is the first to quote the proxy URL."""
+    credential = {
+        "type": "oauth",
+        "oauth_client_id": "client",
+        "oauth_client_secret": CREDENTIAL_SECRET,
+        "oauth_token_url": TOKEN_URL,
+    }
+
+    run = run_alert(
+        alert_settings(credential="better_webhooks:cred:"),
+        credential,
+        proxy=f"http://user:{URL_PASSWORD_SECRET}@proxy.example:{port}",
+    )
+
+    assert run.exit_code == 2
+    assert "Failed to obtain OAuth token" in run.log
+    # The token step used the proxy: it's the proxy URL that fails to parse
+    assert "InvalidURL" in run.log
+    assert URL_PASSWORD_SECRET not in run.log
+
+
 class _OkHandler(http.server.BaseHTTPRequestHandler):
     """A webhook receiver that accepts every POST."""
 

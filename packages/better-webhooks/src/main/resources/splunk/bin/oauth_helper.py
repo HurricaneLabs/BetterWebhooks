@@ -22,15 +22,27 @@ class OAuthTokenError(Exception):
 
 
 def get_oauth_headers(
-    client_id: str, client_secret: str, token_url: str, scope: str = ""
+    client_id: str,
+    client_secret: str,
+    token_url: str,
+    scope: str = "",
+    proxy: str = "",
 ):
     """
     Request a client_credentials OAuth token and return headers for the bearer token.
+    Goes through ``proxy`` when one is set, like the webhook itself.
     Logs status and errors, naming the token URL by its host alone; raises on failure.
     """
     # Its path, query or user:password@ can hold a key, and errors quote them
     register_url(token_url)
     host = url_host(token_url)
+
+    if proxy:
+        # requests quotes the whole proxy URL, password and all, when it won't parse
+        register_url(proxy)
+        proxies = {"http": proxy, "https": proxy}
+    else:
+        proxies = None
 
     # The client secret goes out as basic auth on this request, so never over plain HTTP
     scheme = urlparse(token_url).scheme
@@ -54,6 +66,7 @@ def get_oauth_headers(
             token_url,
             data=payload,
             auth=(client_id, client_secret),
+            proxies=proxies,
             timeout=REQUEST_TIMEOUT,
         )
     except requests.RequestException as exc:

@@ -288,6 +288,7 @@ if __name__ == "__main__":
                     client_secret=oauth_client_secret,
                     token_url=oauth_token_url,
                     scope=oauth_scope,
+                    proxy=proxy,
                 )
             # ValueError: the token URL isn't HTTPS
             except (OAuthTokenError, ValueError):
