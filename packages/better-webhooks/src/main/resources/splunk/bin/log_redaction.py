@@ -6,6 +6,8 @@ in its error message), so rather than trust every log call, each line passes
 through redact() before any handler writes it. Importing this module turns it on.
 """
 
+from __future__ import annotations
+
 import os
 import sys
 from urllib.parse import urlsplit
@@ -78,6 +80,7 @@ def url_parses(url: str, name: str) -> bool:
     url_host() returns them. So check a URL here before anything logs or sends
     it. requests parses with urllib3 too, and its own URL check skips a proxy
     on any scheme but http and https, so this is urllib3's check, not that one.
+    Like requests, it strips leading whitespace first.
 
     Args:
         url: The URL.
@@ -87,7 +90,7 @@ def url_parses(url: str, name: str) -> bool:
         True if the URL parses.
     """
     try:
-        parse_url(url)
+        parse_url(url.lstrip())
     except LocationParseError:
         logger.error(
             "The {} URL won't parse, so it isn't used: check its host and port, "
@@ -98,19 +101,22 @@ def url_parses(url: str, name: str) -> bool:
     return True
 
 
-def url_host(url: str) -> str:
+def url_host(url: str) -> str | None:
     """Return the host, and port if any, of ``url``: the one part safe to log.
 
     Only for a URL url_parses() accepted: in one it refuses, the "host" can be
-    the user name and the start of the password.
+    the user name and the start of the password. Read the way requests reads
+    it, not with urlsplit, which deletes a tab or newline anywhere in the URL
+    and can then find the host in what urllib3 reads as the path.
 
     Args:
         url: The URL.
 
     Returns:
-        The host as written in the URL, without any user:password@.
+        The host as urllib3 normalizes it (lower case, non-ASCII names
+        IDNA-encoded), without any user:password@; None if there is none.
     """
-    return urlsplit(url).netloc.rpartition("@")[2]
+    return parse_url(url.lstrip()).netloc
 
 
 def redact(record: dict) -> None:

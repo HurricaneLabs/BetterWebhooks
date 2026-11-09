@@ -474,6 +474,48 @@ def test_a_proxy_url_that_does_not_parse_fails_the_delivery_with_no_password_log
         assert secret not in run.log
 
 
+# urlsplit deletes the tab and finds svc:<password head> as the host; urllib3,
+# which requests parses with, keeps it and finds no host at all
+TAB_URL = f"https:/\t/svc:{PASSWORD_HEAD}#{PASSWORD_TAIL}@hooks.example.com/x"
+
+
+@responses.activate
+def test_a_webhook_url_urlsplit_reads_another_way_keeps_its_password_out_of_the_log(
+    run_alert: Callable,
+) -> None:
+    """The host logged is the one requests reads, not urlsplit's."""
+    settings = alert_settings()
+    settings["configuration"]["url"] = TAB_URL
+
+    run = run_alert(settings)
+
+    assert run.exit_code == 2
+    assert len(responses.calls) == 0
+    assert PASSWORD_HEAD not in run.log
+    assert PASSWORD_TAIL not in run.log
+
+
+@responses.activate
+def test_a_token_url_urlsplit_reads_another_way_keeps_its_password_out_of_the_log(
+    run_alert: Callable,
+) -> None:
+    """The token request logs its host too, before requests refuses the URL."""
+    credential = {
+        "type": "oauth",
+        "oauth_client_id": "client",
+        "oauth_client_secret": CREDENTIAL_SECRET,
+        "oauth_token_url": TAB_URL,
+    }
+
+    run = run_alert(alert_settings(credential="better_webhooks:cred:"), credential)
+
+    assert run.exit_code == 2
+    assert "Failed to obtain OAuth token" in run.log
+    assert len(responses.calls) == 0
+    for secret in (PASSWORD_HEAD, PASSWORD_TAIL, CREDENTIAL_SECRET):
+        assert secret not in run.log
+
+
 class _RefusingProxy(http.server.HTTPServer):
     """An HTTP proxy on localhost that refuses every tunnel and remembers where it led."""
 
