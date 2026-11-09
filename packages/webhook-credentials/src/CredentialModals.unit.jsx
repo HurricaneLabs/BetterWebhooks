@@ -41,6 +41,7 @@ const modals = [
         () => (
             <EditCredentialModal
                 name={cred.name}
+                app="BetterWebhooks"
                 type={cred.type}
                 cred={cred}
                 setLoaded={() => {}}

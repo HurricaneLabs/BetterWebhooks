@@ -112,6 +112,7 @@ const WebhookCredentials = () => {
                                 <EditCredentialModal
                                     key={cred.name}
                                     name={cred.name}
+                                    app={cred.app}
                                     type={cred.type}
                                     cred={cred}
                                     setLoaded={setLoaded}

@@ -94,19 +94,41 @@ describe('WebhookCredentials', () => {
     });
 
     // The form resets from the listed credential on open, so the list has to reload
-    // after a save or reopening shows the old values.
-    it('shows the saved values when Edit is reopened after a save', async () => {
-        render(<WebhookCredentials />);
-        fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
-        const dialog = await screen.findByRole('dialog');
-        fireEvent.change(within(dialog).getByRole('textbox', { name: 'Username' }), {
-            target: { value: 'newuser' },
-        });
-        fireEvent.click(within(dialog).getByRole('button', { name: 'Submit' }));
-        await waitForElementToBeRemoved(() => screen.queryByRole('dialog'));
-        await reloaded();
-        fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
-        const reopened = await screen.findByRole('dialog');
-        expect(within(reopened).getByRole('textbox', { name: 'Username' })).toHaveValue('newuser');
-    });
+    // after a save or reopening shows the old values. The save has to go to the app the
+    // credential is stored in: from any other app, splunkd can't see an App credential.
+    it.each([
+        ['BetterWebhooks', 'global'],
+        ['BetterWebhooks', 'app'],
+        ['search', 'global'],
+        ['search', 'app'],
+    ])(
+        'shows the saved values when Edit is reopened after a save (%s, %s sharing)',
+        async (app, sharing) => {
+            splunkd = fakeSplunkd([
+                {
+                    name: 'smoketest',
+                    type: 'basic',
+                    username: 'user',
+                    password: 'pass',
+                    app,
+                    sharing,
+                },
+            ]);
+            global.fetch = splunkd.fetch;
+            render(<WebhookCredentials />);
+            fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+            const dialog = await screen.findByRole('dialog');
+            fireEvent.change(within(dialog).getByRole('textbox', { name: 'Username' }), {
+                target: { value: 'newuser' },
+            });
+            fireEvent.click(within(dialog).getByRole('button', { name: 'Submit' }));
+            await waitForElementToBeRemoved(() => screen.queryByRole('dialog'));
+            await reloaded();
+            fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+            const reopened = await screen.findByRole('dialog');
+            expect(within(reopened).getByRole('textbox', { name: 'Username' })).toHaveValue(
+                'newuser'
+            );
+        }
+    );
 });
