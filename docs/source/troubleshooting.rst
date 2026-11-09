@@ -58,6 +58,26 @@ search results too, to wherever the receiver points, including a plain ``http://
 address. To find the new address, request the URL yourself, for example with
 ``curl -si -X POST <url>``, and read the ``Location`` header.
 
+.. _url_wont_parse:
+
+URLs that won't parse
+---------------------
+
+A webhook, proxy or token URL that can't be parsed fails the alert before any
+request uses it, with an error like::
+
+    The proxy URL won't parse, so it isn't used: check its host and port, and percent-encode any #, /, ? or \ in its user name or password
+
+A ``#``, ``/``, ``?`` or ``\`` in a user name or password ends the URL's host
+part early, so write it percent-encoded: ``%23``, ``%2F``, ``%3F`` and ``%5C``.
+For example, the password ``Winter2026#Q4`` goes in the URL as
+``Winter2026%23Q4``. The error doesn't quote the URL, because the part it would
+quote is the start of the password.
+
+Encode them even when the URL seems to work: in ``https://svc:1234#Q4@host/x``,
+``svc`` reads as the host and ``1234`` as its port, so the alert goes to the
+wrong place and the log names ``host=svc:1234``.
+
 SSL Certificate Errors (Internal / Private CA)
 -----------------------------------------------
 

@@ -11,6 +11,8 @@ import sys
 from urllib.parse import urlsplit
 
 import requests
+from urllib3.exceptions import LocationParseError
+from urllib3.util import parse_url
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "lib"))
 
@@ -67,8 +69,40 @@ def register_url(url: object) -> None:
                 register_secret(part)
 
 
+def url_parses(url: str, name: str) -> bool:
+    """Tell whether requests can read ``url``; if not, log so without quoting it.
+
+    A raw #, /, ? or \\ in a password ends the URL's host part early, so the
+    user name and the start of the password read as a host and port. urllib3
+    then quotes them in its error, in a form register_url() can't predict, and
+    url_host() returns them. So check a URL here before anything logs or sends
+    it. requests parses with urllib3 too, and its own URL check skips a proxy
+    on any scheme but http and https, so this is urllib3's check, not that one.
+
+    Args:
+        url: The URL.
+        name: What the URL is for, as the log line names it ("webhook").
+
+    Returns:
+        True if the URL parses.
+    """
+    try:
+        parse_url(url)
+    except LocationParseError:
+        logger.error(
+            "The {} URL won't parse, so it isn't used: check its host and port, "
+            "and percent-encode any #, /, ? or \\ in its user name or password",
+            name,
+        )
+        return False
+    return True
+
+
 def url_host(url: str) -> str:
     """Return the host, and port if any, of ``url``: the one part safe to log.
+
+    Only for a URL url_parses() accepted: in one it refuses, the "host" can be
+    the user name and the start of the password.
 
     Args:
         url: The URL.
