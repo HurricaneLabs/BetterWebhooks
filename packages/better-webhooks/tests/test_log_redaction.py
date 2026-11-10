@@ -46,8 +46,77 @@ def test_a_url_with_a_leading_space_is_checked_as_requests_sends_it(
         pytest.param(
             "https://svc:pa[ss@hooks.example.com/x", False, id="bracket-in-password"
         ),
+        pytest.param(
+            "svc_user:pa[ss@proxy.example:3128", False, id="bracket-no-scheme"
+        ),
+        pytest.param(
+            "svc_user:pa%5Bss@proxy.example:3128", True, id="encoded-bracket-no-scheme"
+        ),
     ],
 )
 def test_a_backslash_is_refused_only_before_the_path(url: str, parses: bool) -> None:
     """A \\ ends urllib3's host part but not urlsplit's; after the host it's just encoded."""
     assert url_parses(url, "webhook") is parses
+
+
+@pytest.mark.parametrize(
+    ("url", "parses"),
+    [
+        # Teams webhook URLs carry an @ in the path, with no user info
+        pytest.param(
+            "https://example.webhook.office.com/webhookb2/a@b/IncomingWebhook/c/d",
+            True,
+            id="at-in-path-no-user-info",
+        ),
+        pytest.param("https://svc:pw@hooks.example.com/x", True, id="user-info"),
+        pytest.param(
+            "https://svc:pw@hooks.example.com/x?to=a%40b",
+            True,
+            id="user-info-and-encoded-at-in-query",
+        ),
+        # Refused even when meant: the URL reads the same as a password cut short
+        pytest.param(
+            "https://svc:pw@hooks.example.com/a@b", False, id="user-info-and-at-in-path"
+        ),
+        pytest.param(
+            "https://svc:pw@hooks.example.com/x?to=a@b",
+            False,
+            id="user-info-and-at-in-query",
+        ),
+        pytest.param("https://hooks.example.com/x#a@b", False, id="at-in-fragment"),
+        # urllib3 reads an empty user info as none at all
+        pytest.param(
+            "https://@hooks.example.com/a@b", False, id="empty-user-info-and-at-in-path"
+        ),
+        # urllib3 drops the .. and the segment before it, so its path has no @
+        pytest.param(
+            "https://svc:pw@hooks.example.com/a@b/..",
+            False,
+            id="user-info-and-at-before-dot-dot",
+        ),
+        # A proxy may have no scheme; urllib3 reads it as if it began with //
+        pytest.param("svc_user:pw@proxy.example:3128", True, id="no-scheme-proxy"),
+        pytest.param(
+            "@proxy.example:3128/a@b", False, id="no-scheme-empty-user-info-and-at"
+        ),
+        pytest.param(
+            "CORP\\jdoe:pw@proxy.example:3128", False, id="no-scheme-domain-user"
+        ),
+    ],
+)
+def test_an_at_after_the_host_is_refused_where_it_could_end_the_user_info(
+    url: str, parses: bool
+) -> None:
+    """Both parsers split user info at its last @, so a cut ahead of one moves the host."""
+    assert url_parses(url, "webhook") is parses
+
+
+def test_the_refusal_names_every_character_to_percent_encode(
+    log_lines: list[str],
+) -> None:
+    """The message is all a user gets, since it can't quote the URL, so it names each character to fix."""
+    assert url_parses("svc_user:pa[ss@proxy.example:3128", "proxy") is False
+
+    (line,) = [line for line in log_lines if "proxy URL won't parse" in line]
+    for char in ("#", "/", "?", "\\", "@", "[", "]"):
+        assert char in line

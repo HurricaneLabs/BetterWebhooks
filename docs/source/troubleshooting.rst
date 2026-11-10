@@ -66,15 +66,23 @@ URLs that won't parse
 A webhook, proxy or token URL that can't be parsed fails the alert before any
 request uses it, with an error like::
 
-    The proxy URL won't parse, so it isn't used: check its host and port, and percent-encode any #, /, ? or \ in its user name or password
+    The proxy URL won't parse, so it isn't used: check its host and port, and percent-encode any #, /, ?, \, @, [ or ] in its user name or password, and any @ after its host
 
 A ``#``, ``/``, ``?`` or ``\`` in a user name or password ends the URL's host
 part early, so write it percent-encoded: ``%23``, ``%2F``, ``%3F`` and ``%5C``.
-For example, the password ``Winter2026#Q4`` goes in the URL as
-``Winter2026%23Q4``. The error doesn't quote the URL, because the part it would
-quote is the start of the password.
+Write an ``@`` in a user name or password as ``%40``, and a ``[`` or ``]`` as
+``%5B`` or ``%5D`` (brackets belong only around an IPv6 host). For example, the
+password ``P@ss#2026`` goes in the URL as ``P%40ss%232026``. The error doesn't
+quote the URL, because the part it would quote is the start of the password.
 
-Encode them even when the URL seems to work: in ``https://svc:1234#Q4@host/x``,
+A URL with a user name or password also can't have a raw ``@`` anywhere after
+its host, and no URL can have one after a ``#``: write those as ``%40`` too.
+That URL would read the same as a password cut short, so it's refused even when
+the ``@`` is meant. Most receivers read ``%40`` the same as ``@``. A URL with no
+user name or password, such as a Microsoft Teams webhook, can keep the ``@`` in
+its path.
+
+Encode them even when the URL seems to work: in ``https://svc:1234/Q4@host/x``,
 ``svc`` reads as the host and ``1234`` as its port, so the alert goes to the
 wrong place and the log names ``host=svc:1234``.
 

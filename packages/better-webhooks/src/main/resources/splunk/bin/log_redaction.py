@@ -86,6 +86,19 @@ def url_parses(url: str, name: str) -> bool:
     urlsplit reads past a \\ to the real host, so a \\ anywhere in its host
     part is refused too. It's never valid there.
 
+    An @ ahead of the cut makes a URL that does parse, wrongly: both parsers
+    split user info at its last @, so in svc:P@ssw0rd#2026@host the host is
+    ssw0rd. So an @ in the fragment is refused, and so is an @ in the path or
+    query of a URL with user info. That also refuses a URL that meant its @,
+    which then has to write it as %40. urllib3 reads an empty user info, as in
+    https://@tok/tail@host, as none at all, so an @ in urlsplit's host part
+    counts as user info too.
+
+    These checks read the text as written, with urlsplit: urllib3's path has
+    any .. removed, along with the segment before it, which can hold the @.
+    A URL with no scheme (a proxy may have none) is read as if it began with
+    //, as urllib3 reads it; urlsplit would find no host part at all.
+
     Args:
         url: The URL.
         name: What the URL is for, as the log line names it ("webhook").
@@ -95,15 +108,24 @@ def url_parses(url: str, name: str) -> bool:
     """
     url = url.lstrip()
     try:
-        parse_url(url)
-        refused = "\\" in urlsplit(url).netloc
+        parsed = parse_url(url)
+        # urllib3 adds // to a URL that doesn't start with a scheme or a /
+        no_scheme = parsed.scheme is None and not url.startswith("/")
+        parts = urlsplit("//" + url if no_scheme else url)
+        has_user_info = parsed.auth is not None or "@" in parts.netloc
+        refused = (
+            "\\" in parts.netloc
+            or "@" in parts.fragment
+            or (has_user_info and "@" in parts.path + parts.query)
+        )
     # LocationParseError is a ValueError; urlsplit raises one on an unbalanced [
     except ValueError:
         refused = True
     if refused:
         logger.error(
             "The {} URL won't parse, so it isn't used: check its host and port, "
-            "and percent-encode any #, /, ? or \\ in its user name or password",
+            "and percent-encode any #, /, ?, \\, @, [ or ] in its user name or "
+            "password, and any @ after its host",
             name,
         )
         return False
