@@ -77,6 +77,10 @@ header's value.
    or an emoji. Change the search so the field holds one line of plain text,
    for example ``| eval host=replace(host, "[\r\n]", " ")``.
 
+``Header 2 (Content-Length) is one the alert action sets itself, so the webhook isn't sent: remove the row``
+   requests sets this header from the body itself; remove the row. The same
+   goes for ``Transfer-Encoding`` and ``Connection``.
+
 ``Header Authorization is set by both credential my_oauth and the alert's header 1, so the webhook isn't sent``
    Two sources set the same header. Remove the row, or pick a credential that
    doesn't set that header. The URL's user info sets ``Authorization`` too.

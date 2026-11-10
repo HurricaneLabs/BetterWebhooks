@@ -77,6 +77,31 @@ def test_a_name_that_is_not_a_header_name_is_refused_without_quoting_it(
 
 
 @pytest.mark.parametrize(
+    "name",
+    [
+        pytest.param("content-length", id="content-length"),
+        pytest.param("TRANSFER-ENCODING", id="transfer-encoding"),
+        pytest.param("Connection", id="connection"),
+    ],
+)
+def test_a_framing_header_requests_sets_itself_is_refused(name: str) -> None:
+    """A second copy would garble the request's framing, in any spelling."""
+    with pytest.raises(HeaderError) as refused:
+        read_header_rows(configuration((name, "v")))
+    assert str(refused.value) == (
+        f"Header 1 ({name}) is one the alert action sets itself, "
+        "so the webhook isn't sent: remove the row"
+    )
+
+
+def test_host_is_accepted() -> None:
+    """Host isn't framing: a receiver behind a shared address may route on it."""
+    assert read_header_rows(configuration(("Host", "hooks.example.com"))) == [
+        HeaderRow(1, "Host", "hooks.example.com")
+    ]
+
+
+@pytest.mark.parametrize(
     "value",
     [
         pytest.param("web01\nX-Original-URL: /admin", id="line-feed"),

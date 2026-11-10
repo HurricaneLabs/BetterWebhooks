@@ -25,6 +25,10 @@ _FIELD_NAME = re.compile(r"[!#$%&'*+\-.^_`|~0-9A-Za-z]+")
 # character (CR, LF, NUL and the rest) or DEL could break the header apart.
 _BAD_VALUE_CHAR = re.compile(r"[^\t\x20-\x7e\x80-\xff]")
 
+# requests sets these from the body and the connection itself; a second copy
+# would garble the request's framing. Host stays allowed.
+_FRAMING_HEADERS = ("content-length", "transfer-encoding", "connection")
+
 
 class HeaderError(Exception):
     """The alert's headers can't be sent as configured. The message quotes no header value."""
@@ -49,9 +53,9 @@ def read_header_rows(configuration: dict) -> list[HeaderRow]:
 
     Raises:
         HeaderError: A row has a value but no name, a name that isn't a
-            header name, or a character a header can't carry inside its
-            value: a line break or other control character, DEL, or
-            anything outside Latin-1.
+            header name or is one requests sets itself, or a character a
+            header can't carry inside its value: a line break or other
+            control character, DEL, or anything outside Latin-1.
     """
     rows = []
     for number in range(1, HEADER_ROWS + 1):
@@ -67,6 +71,11 @@ def read_header_rows(configuration: dict) -> list[HeaderRow]:
             raise HeaderError(
                 f"Header {number}'s name isn't a valid header name, "
                 "so the webhook isn't sent"
+            )
+        if name.lower() in _FRAMING_HEADERS:
+            raise HeaderError(
+                f"Header {number} ({name}) is one the alert action sets itself, "
+                "so the webhook isn't sent: remove the row"
             )
         if _BAD_VALUE_CHAR.search(value):
             raise HeaderError(

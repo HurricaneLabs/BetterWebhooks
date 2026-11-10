@@ -99,7 +99,9 @@ A row may replace the two headers the alert action sets itself:
 ``User-Agent``. It may not set a header a credential sets, such as
 ``Authorization`` with an OAuth credential, or ``Authorization`` when the URL
 holds a user name and password. Such an alert fails without sending anything,
-and the log names the header and both sources.
+and the log names the header and both sources. Nor can a row set
+``Content-Length``, ``Transfer-Encoding`` or ``Connection``: requests sets
+those itself.
 
 Header values are saved with the alert in plain text, like the URL. Put a
 secret, such as an API key, in a credential instead.
