@@ -135,7 +135,8 @@ def url_claims(url: str) -> tuple[str, ...]:
     """
     try:
         user_info = get_auth_from_url(url.lstrip())
-    except ValueError:  # an unbalanced [; url_parses() refuses the URL later
+    except ValueError:
+        # an unbalanced [; the alert's HTTPS scheme check fails on it before this runs
         return ()
     return ("Authorization",) if any(user_info) else ()
 
