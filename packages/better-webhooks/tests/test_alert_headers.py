@@ -45,6 +45,13 @@ def test_a_name_with_an_empty_value_sends_an_empty_value() -> None:
     ]
 
 
+def test_a_legal_punctuated_name_is_accepted() -> None:
+    """RFC 9110 tchar includes _ . and !, so this name is a header name."""
+    assert read_header_rows(configuration(("X_Trace.Id!", "v"))) == [
+        HeaderRow(1, "X_Trace.Id!", "v")
+    ]
+
+
 def test_a_value_with_no_name_is_refused() -> None:
     """Most likely a name deleted by mistake."""
     with pytest.raises(HeaderError) as refused:
