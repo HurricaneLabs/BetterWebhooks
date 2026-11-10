@@ -3,9 +3,10 @@
 Alert Action
 =============
 
-The "Better Webhook" alert action has 4 parameters: The URL that the webhook
-will POST to, an optional credential (see :doc:`credentials`), the POST body
-format, and an optional failure pattern.
+The "Better Webhook" alert action has these parameters: the URL that the
+webhook will POST to, an optional credential (see :doc:`credentials`), the
+POST body format, an optional failure pattern, and up to three headers of its
+own.
 
 Body Format
 ------------
@@ -62,7 +63,7 @@ The following tokens are available for use in the POST body format:
 * ``$$owner$$`` - The owner of the search
 * ``$$results_link$$`` - A link to the search results
 * ``$$full_result$$`` - The complete search results
-* ``$$none$$`` - Special token that sends an empty POST body with no Content-Type header
+* ``$$none$$`` - Special token that sends an empty POST body with no Content-Type header, unless a header row or an OAuth credential sets one
 
 Failure Pattern
 ----------------
@@ -80,6 +81,41 @@ delivery. Leave it empty to turn the check off. An invalid pattern is logged and
 ignored, so it never fails a delivery on its own. In SPL, the parameter is
 ``param.body_failure_regex``.
 
+Headers
+--------
+
+An alert can send up to three headers of its own, in the **Header 1** to
+**Header 3** rows: a name and a value each. For example, to tell the receiver
+which host raised the alert, set a row's name to ``X-Alert-Host`` and its
+value to ``$result.host$``.
+
+Values can use Splunk tokens. Splunk fills them in before the alert action
+runs, so a value can hold anything a search result holds. A line break at
+either end of a value is trimmed away. A line break or another character a
+header can't carry left inside it, such as an ASCII control character other
+than tab, or a character outside Latin-1, fails the alert without sending
+anything, since a line break would let the search result add a header of its
+own.
+
+A row may replace the two headers the alert action sets itself:
+``Content-Type`` (``application/json`` whenever there's a body) and
+``User-Agent``. It may also replace the ``Accept`` and ``Content-Type`` an
+OAuth credential sends, both ``application/json``. It may not set any other
+header a credential sets, such as ``Authorization`` with an OAuth credential, or
+``Authorization`` when the URL holds a user name and password, nor a header
+another row sets, either. Such an alert fails without sending anything, and
+the log names the header and both sources.
+
+A row can't set ``Content-Length``, ``Transfer-Encoding`` or ``Connection``,
+which requests sets itself: such an alert fails without sending anything.
+
+Header values are saved with the alert in plain text, like the URL. Put a
+secret, such as an API key, in a credential instead.
+
+In SPL, the parameters are ``param.header_1_name`` and
+``param.header_1_value``, through ``param.header_3_name`` and
+``param.header_3_value``.
+
 Using sendalert in SPL
 -----------------------
 
@@ -91,6 +127,8 @@ The alert action can be triggered directly from SPL using the ``| sendalert`` co
    | sendalert better_webhook
        param.url="https://hooks.example.com/webhook"
        param.credential="my_credential_name"
+       param.header_1_name="X-Source"
+       param.header_1_value="splunk"
        param.body_format="$$none$$"
 
 Pass ``param.credential`` as the credential **name** as it appears on the credentials page —

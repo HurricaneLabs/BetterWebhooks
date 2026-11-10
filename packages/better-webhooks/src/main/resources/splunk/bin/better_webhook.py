@@ -9,10 +9,21 @@ import os
 import re
 import sys
 import traceback
+from collections.abc import Sequence
 from urllib.parse import quote, urlparse
 
 import requests
 import splunk.rest  # type: ignore
+from alert_headers import (
+    HeaderError,
+    HeaderRow,
+    Source,
+    check_clashes,
+    credential_claims,
+    read_header_rows,
+    stored_name,
+    url_claims,
+)
 from hmac_helper import get_hmac_headers
 from log_redaction import register_secret, register_url, url_host, url_parses
 from oauth_helper import REQUEST_TIMEOUT, OAuthTokenError, get_oauth_headers
@@ -73,12 +84,15 @@ def send_webhook_request(
     user_agent: str,
     proxy: str,
     body_failure_regex: str = "",
+    header_rows: Sequence[HeaderRow] = (),
 ):
     """
     Send the webhook and log why it failed, if it does. Never logs the request or
     response body: they can carry search results, tokens or ticket data. Nor any
     part of the URL but its host: for some receivers (Slack, for one) the path is
-    the secret.
+    the secret. The alert's own header rows go out last, so they may replace the
+    automatic Content-Type and User-Agent, and the OAuth credential's Accept and
+    Content-Type.
     """
     if url is None:
         logger.error("No URL provided")
@@ -101,6 +115,12 @@ def send_webhook_request(
         headers["Content-Type"] = "application/json"
 
     headers["User-Agent"] = user_agent
+    # requests merges header names case-insensitively and keeps the later
+    # value, so a row replaces a header of any spelling set before it: the
+    # automatic Content-Type and User-Agent, and the OAuth credential's Accept
+    # and Content-Type. A row can't replace a header a credential claims:
+    # check_clashes refused that.
+    headers.update((row.name, row.value) for row in header_rows)
     logger.info(
         "Sending POST request to host={} with size={} bytes payload",
         url_host(url),
@@ -219,6 +239,31 @@ if __name__ == "__main__":
         else:
             credential = None
 
+        # Before any credential builds its headers, so a refused alert sends
+        # nothing anywhere, not even an OAuth token request
+        try:
+            header_rows = read_header_rows(settings["configuration"])
+            sources = []
+            if credential_name and credential:
+                sources.append(
+                    Source(
+                        f"credential {stored_name(credential_name)}",
+                        credential_claims(credential),
+                        new=False,
+                    )
+                )
+            sources.append(
+                Source("the URL's user info", url_claims(url or ""), new=False)
+            )
+            sources += [
+                Source(f"the alert's header {row.number}", (row.name,), new=True)
+                for row in header_rows
+            ]
+            check_clashes(sources)
+        except HeaderError as exc:
+            logger.error("{}", exc)
+            sys.exit(2)
+
         sid = settings.get("sid")
         search_name = settings.get("search_name")
         app = settings.get("app")
@@ -319,6 +364,7 @@ if __name__ == "__main__":
             user_agent=user_agent,
             proxy=proxy,
             body_failure_regex=body_failure_regex,
+            header_rows=header_rows,
         ):
             sys.exit(2)
     # Blind on purpose: past this point Python's own handler prints the traceback,
