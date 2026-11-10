@@ -13,6 +13,8 @@ from __future__ import annotations
 import re
 from typing import NamedTuple
 
+from requests.utils import get_auth_from_url
+
 HEADER_ROWS = 3
 
 # RFC 9110 field-name: one or more tchar
@@ -66,3 +68,80 @@ def read_header_rows(configuration: dict) -> list[HeaderRow]:
             )
         rows.append(HeaderRow(number, name, value))
     return rows
+
+
+class Source(NamedTuple):
+    """Something that sets headers: a credential, the URL's user info, or a header row."""
+
+    label: str  # as the log names it: "credential oauth_app", "the alert's header 2"
+    names: tuple[str, ...]
+    new: bool  # a header row or the second credential: only these can clash
+
+
+def stored_name(credential_name: str) -> str:
+    """Name a credential as the credentials page shows it.
+
+    A saved alert passes the storage key, better_webhooks:<name>:, and
+    | sendalert the bare name.
+    """
+    return credential_name.removeprefix("better_webhooks:").removesuffix(":")
+
+
+def credential_claims(credential: dict) -> tuple[str, ...]:
+    """Name the headers a stored credential sets, without building them.
+
+    Reads stored fields only, so the clash check can run before an OAuth token
+    request or an HMAC signature. An unknown type claims nothing: the alert
+    action refuses it later anyway.
+    """
+    kind = credential.get("type")
+    if kind in ("basic", "oauth"):
+        names = ["Authorization"]
+    elif kind == "header":
+        names = [credential.get("header_name") or ""]
+    elif kind == "hmac":
+        names = [
+            credential.get("hmac_sig_header") or "",
+            credential.get("hmac_time_header") or "",
+        ]
+    else:
+        names = []
+    return tuple(name.strip() for name in names if name.strip())
+
+
+def url_claims(url: str) -> tuple[str, ...]:
+    """Name the header a URL's user info sets: Authorization, when requests would send it.
+
+    Reads the user info the way requests does, so a user name with no
+    password, which requests doesn't send, claims nothing. Strips leading
+    whitespace first, as requests does: urlsplit on Python 3.9 doesn't.
+    """
+    try:
+        user_info = get_auth_from_url(url.lstrip())
+    except ValueError:  # an unbalanced [; url_parses() refuses the URL later
+        return ()
+    return ("Authorization",) if any(user_info) else ()
+
+
+def check_clashes(sources: list[Source]) -> None:
+    """Refuse two sources that set one header, when either of them is new in 2.0.0.
+
+    Names compare case-insensitively, as HTTP and requests compare them. A
+    source naming one header twice never clashes with itself, and two pre-2.0
+    sources keep the precedence they had, so no existing alert changes.
+
+    Args:
+        sources: Every source of headers, in the order the alert applies them.
+
+    Raises:
+        HeaderError: Naming the header and both sources, never a value.
+    """
+    first: dict[str, Source] = {}
+    for source in sources:
+        for name in source.names:
+            earlier = first.setdefault(name.lower(), source)
+            if earlier is not source and (earlier.new or source.new):
+                raise HeaderError(
+                    f"Header {name} is set by both {earlier.label} and "
+                    f"{source.label}, so the webhook isn't sent"
+                )

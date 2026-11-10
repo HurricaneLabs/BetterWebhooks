@@ -3,7 +3,16 @@
 from __future__ import annotations
 
 import pytest
-from alert_headers import HeaderError, HeaderRow, read_header_rows
+from alert_headers import (
+    HeaderError,
+    HeaderRow,
+    Source,
+    check_clashes,
+    credential_claims,
+    read_header_rows,
+    stored_name,
+    url_claims,
+)
 
 
 def configuration(*rows: tuple[str, str]) -> dict:
@@ -97,3 +106,144 @@ def test_a_fourth_row_is_not_read() -> None:
     """The form has three rows; a header_4 from SPL is ignored."""
     config = configuration(*[(f"X-{n}", "v") for n in range(1, 5)])
     assert [row.number for row in read_header_rows(config)] == [1, 2, 3]
+
+
+@pytest.mark.parametrize(
+    ("credential", "claims"),
+    [
+        pytest.param(
+            {"type": "basic", "username": "u", "password": "p"},
+            ("Authorization",),
+            id="basic",
+        ),
+        pytest.param(
+            {
+                "type": "oauth",
+                "oauth_client_id": "c",
+                "oauth_client_secret": "s",
+                "oauth_token_url": "https://idp.example/token",
+            },
+            ("Authorization",),
+            id="oauth",
+        ),
+        pytest.param(
+            {"type": "header", "header_name": " X-Api-Key ", "header_value": "k"},
+            ("X-Api-Key",),
+            id="header",
+        ),
+        pytest.param(
+            {"type": "hmac", "hmac_sig_header": "X-Sig"}, ("X-Sig",), id="hmac"
+        ),
+        pytest.param(
+            {
+                "type": "hmac",
+                "hmac_sig_header": "X-Sig",
+                "hmac_time_header": " X-Time ",
+            },
+            ("X-Sig", "X-Time"),
+            id="hmac-timestamp",
+        ),
+        pytest.param({"type": "carrier-pigeon"}, (), id="unknown-type"),
+    ],
+)
+def test_each_credential_type_claims_the_headers_it_sets(
+    credential: dict, claims: tuple
+) -> None:
+    """Read from stored fields only, so no token is fetched and nothing is signed."""
+    assert credential_claims(credential) == claims
+
+
+@pytest.mark.parametrize(
+    ("url", "claims"),
+    [
+        pytest.param("https://hooks.example.com/x", (), id="no-user-info"),
+        pytest.param(
+            "https://svc:pw@hooks.example.com/x",
+            ("Authorization",),
+            id="user-and-password",
+        ),
+        pytest.param(
+            "https://:pw@hooks.example.com/x", ("Authorization",), id="password-only"
+        ),
+        pytest.param(
+            "  https://svc:pw@hooks.example.com/x",
+            ("Authorization",),
+            id="leading-space",
+        ),
+        pytest.param("https://svc@hooks.example.com/x", (), id="user-name-only"),
+        pytest.param("https://[::1/x", (), id="unbalanced-bracket"),
+        pytest.param("", (), id="no-url"),
+    ],
+)
+def test_url_user_info_claims_authorization_when_requests_would_send_it(
+    url: str, claims: tuple
+) -> None:
+    """requests sends no Authorization for a user name with no password."""
+    assert url_claims(url) == claims
+
+
+@pytest.mark.parametrize("name", ["better_webhooks:my_cred:", "my_cred"])
+def test_a_credential_is_named_as_the_credentials_page_shows_it(name: str) -> None:
+    """A saved alert passes the storage key; | sendalert passes the bare name."""
+    assert stored_name(name) == "my_cred"
+
+
+OAUTH_CREDENTIAL = Source("credential oauth_app", ("Authorization",), new=False)
+URL_USER_INFO = Source("the URL's user info", ("Authorization",), new=False)
+
+
+def row(number: int, name: str) -> Source:
+    """A header row as a source."""
+    return Source(f"the alert's header {number}", (name,), new=True)
+
+
+@pytest.mark.parametrize("spelled", ["Authorization", "authorization", "AUTHORIZATION"])
+def test_a_row_setting_a_header_a_credential_sets_is_refused(spelled: str) -> None:
+    """HTTP header names ignore case, and so does requests."""
+    with pytest.raises(HeaderError) as refused:
+        check_clashes([OAUTH_CREDENTIAL, row(1, spelled)])
+    assert str(refused.value) == (
+        f"Header {spelled} is set by both credential oauth_app and the alert's header 1, "
+        "so the webhook isn't sent"
+    )
+
+
+def test_two_rows_with_one_name_are_refused() -> None:
+    """Two new sources clash with each other too."""
+    with pytest.raises(
+        HeaderError, match="set by both the alert's header 1 and the alert's header 3"
+    ):
+        check_clashes([row(1, "X-Source"), row(3, "x-source")])
+
+
+def test_two_old_sources_keep_the_precedence_they_had() -> None:
+    """An OAuth credential and URL user info: requests sends the URL's, as it did before 2.0."""
+    check_clashes([OAUTH_CREDENTIAL, URL_USER_INFO])
+
+
+def test_one_source_naming_a_header_twice_is_not_a_clash() -> None:
+    """An HMAC second credential whose signature and timestamp headers share a name still works."""
+    check_clashes(
+        [Source("credential signed", ("X-Sig", "X-Sig"), new=True), row(1, "X-Other")]
+    )
+
+
+def test_a_row_clashing_with_the_first_of_two_old_sources_is_refused() -> None:
+    """The message names the first source that set the header."""
+    with pytest.raises(
+        HeaderError, match="set by both credential oauth_app and the alert's header 1"
+    ):
+        check_clashes([OAUTH_CREDENTIAL, URL_USER_INFO, row(1, "Authorization")])
+
+
+def test_sources_setting_different_headers_pass() -> None:
+    """Rows naming the automatic Content-Type and User-Agent aren't clashes: those aren't sources."""
+    check_clashes(
+        [
+            OAUTH_CREDENTIAL,
+            URL_USER_INFO,
+            row(1, "X-Source"),
+            row(2, "Content-Type"),
+            row(3, "User-Agent"),
+        ]
+    )
