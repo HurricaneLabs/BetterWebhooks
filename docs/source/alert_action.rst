@@ -63,7 +63,7 @@ The following tokens are available for use in the POST body format:
 * ``$$owner$$`` - The owner of the search
 * ``$$results_link$$`` - A link to the search results
 * ``$$full_result$$`` - The complete search results
-* ``$$none$$`` - Special token that sends an empty POST body with no Content-Type header
+* ``$$none$$`` - Special token that sends an empty POST body with no Content-Type header, unless a header row sets one
 
 Failure Pattern
 ----------------
