@@ -87,7 +87,7 @@ def test_the_alerts_own_headers_reach_the_receiver_beside_the_credentials(
 def test_a_row_replaces_the_automatic_content_type_and_user_agent(
     run_alert: Callable,
 ) -> None:
-    """In any spelling: one Content-Type goes out, the row's."""
+    """The row's spelling and value win over the automatic Content-Type."""
     responses.post(WEBHOOK_URL, body="ok")
 
     run = run_alert(
@@ -99,6 +99,8 @@ def test_a_row_replaces_the_automatic_content_type_and_user_agent(
 
     assert run.exit_code == 0, run.log
     sent = responses.calls[0].request.headers
+    # requests' headers ignore case, so only the row's lowercase spelling
+    # surviving proves the row went on last
     assert [name for name in sent if name.lower() == "content-type"] == ["content-type"]
     assert sent["Content-Type"] == "application/json; charset=utf-8"
     assert sent["User-Agent"] == "my-agent"
