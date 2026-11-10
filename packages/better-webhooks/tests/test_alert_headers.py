@@ -96,7 +96,7 @@ def test_a_framing_header_requests_sets_itself_is_refused(name: str) -> None:
     with pytest.raises(HeaderError) as refused:
         read_header_rows(configuration((name, "v")))
     assert str(refused.value) == (
-        f"Header 1 ({name}) is one the alert action sets itself, "
+        f"Header 1 ({name}) is managed by the HTTP client, "
         "so the webhook isn't sent: remove the row"
     )
 

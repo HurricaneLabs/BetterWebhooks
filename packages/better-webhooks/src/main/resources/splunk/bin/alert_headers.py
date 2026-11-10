@@ -74,7 +74,7 @@ def read_header_rows(configuration: dict) -> list[HeaderRow]:
             )
         if name.lower() in _FRAMING_HEADERS:
             raise HeaderError(
-                f"Header {number} ({name}) is one the alert action sets itself, "
+                f"Header {number} ({name}) is managed by the HTTP client, "
                 "so the webhook isn't sent: remove the row"
             )
         if _BAD_VALUE_CHAR.search(value):

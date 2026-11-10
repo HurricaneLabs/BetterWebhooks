@@ -77,7 +77,7 @@ header's value.
    or an emoji. Change the search so the field holds one line of plain text,
    for example ``| eval host=replace(host, "[\r\n]", " ")``.
 
-``Header 2 (Content-Length) is one the alert action sets itself, so the webhook isn't sent: remove the row``
+``Header 2 (Content-Length) is managed by the HTTP client, so the webhook isn't sent: remove the row``
    requests sets this header from the body itself; remove the row. The same
    goes for ``Transfer-Encoding`` and ``Connection``.
 
