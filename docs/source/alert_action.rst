@@ -90,9 +90,11 @@ which host raised the alert, set a row's name to ``X-Alert-Host`` and its
 value to ``$result.host$``.
 
 Values can use Splunk tokens. Splunk fills them in before the alert action
-runs, so a value can hold anything a search result holds. If a value ends up
-holding a line break, the alert fails without sending anything, since a line
-break would let the search result add a header of its own.
+runs, so a value can hold anything a search result holds. A line break at
+either end of a value is trimmed away. A line break or another character a
+header can't carry left inside it, such as a control character or a character
+outside Latin-1, fails the alert without sending anything, since a line break
+would let the search result add a header of its own.
 
 A row may replace the two headers the alert action sets itself:
 ``Content-Type`` (``application/json`` whenever there's a body) and

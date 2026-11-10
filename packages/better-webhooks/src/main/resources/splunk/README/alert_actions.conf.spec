@@ -31,9 +31,9 @@ param.header_3_value = <string>
 * A row with an empty name is skipped; a value with no name fails the alert,
   and so does a name that isn't a valid header name, or a name used by two
   rows.
-* A value may use Splunk tokens. If a value holds a line break or another
-  character a header can't carry once they're filled in, the alert fails
-  without sending anything.
+* A value may use Splunk tokens. Once they're filled in, a line break at
+  either end of a value is trimmed away; a line break or another character a
+  header can't carry left inside it fails the alert without sending anything.
 * A row may replace the automatic Content-Type and User-Agent headers, and the
   Accept and Content-Type an OAuth credential sends, but not a header a
   credential sets otherwise, or the Authorization from a URL's user info.

@@ -142,9 +142,10 @@
                 style="display: block; position: static; width: auto; margin-left: 0"
             >
                 Optional headers sent with every webhook: a name and a value each. Values can
-                use tokens such as $result.host$; if one fills in a line break, the alert fails
-                without sending. Values are saved with the alert in plain text, so put a secret
-                in a credential instead.
+                use tokens such as $result.host$. A line break at either end of a value is
+                trimmed; one inside it, or another character a header can't carry, fails the
+                alert without sending. Values are saved with the alert in plain text, so put a
+                secret in a credential instead.
             </span>
         </div>
     </div>
