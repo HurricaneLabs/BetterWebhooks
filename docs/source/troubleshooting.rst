@@ -82,8 +82,9 @@ header's value.
    goes for ``Transfer-Encoding`` and ``Connection``.
 
 ``Header Authorization is set by both credential my_oauth and the alert's header 1, so the webhook isn't sent``
-   Two sources set the same header. Remove the row, or pick a credential that
-   doesn't set that header. The URL's user info sets ``Authorization`` too.
+   Two sources set the same header. Remove one of the two: clear or rename a
+   row, or pick a credential that doesn't set that header; the URL's user info
+   sets ``Authorization`` too.
 
 .. _url_wont_parse:
 

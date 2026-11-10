@@ -97,10 +97,11 @@ break would let the search result add a header of its own.
 A row may replace the two headers the alert action sets itself:
 ``Content-Type`` (``application/json`` whenever there's a body) and
 ``User-Agent``. It may also replace the ``Accept`` and ``Content-Type`` an
-OAuth credential sends, both ``application/json``. It may not set a header a credential sets, such as
-``Authorization`` with an OAuth credential, or ``Authorization`` when the URL
-holds a user name and password. Such an alert fails without sending anything,
-and the log names the header and both sources. Nor can a row set
+OAuth credential sends, both ``application/json``. It may not set a header a
+credential sets, such as ``Authorization`` with an OAuth credential, or
+``Authorization`` when the URL holds a user name and password, nor a header
+another row sets, either. Such an alert fails without sending anything, and
+the log names the header and both sources. Nor can a row set
 ``Content-Length``, ``Transfer-Encoding`` or ``Connection``: requests sets
 those itself.
 

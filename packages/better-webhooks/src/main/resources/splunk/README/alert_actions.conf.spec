@@ -28,7 +28,9 @@ param.header_2_value = <string>
 param.header_3_name = <string>
 param.header_3_value = <string>
 * Optional headers sent with every webhook: a name and a value each.
-* A row with an empty name is skipped; a value with no name fails the alert.
+* A row with an empty name is skipped; a value with no name fails the alert,
+  and so does a name that isn't a valid header name, or a name used by two
+  rows.
 * A value may use Splunk tokens. If a value holds a line break or another
   character a header can't carry once they're filled in, the alert fails
   without sending anything.
