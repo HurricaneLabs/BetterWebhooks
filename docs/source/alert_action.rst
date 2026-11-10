@@ -92,20 +92,22 @@ value to ``$result.host$``.
 Values can use Splunk tokens. Splunk fills them in before the alert action
 runs, so a value can hold anything a search result holds. A line break at
 either end of a value is trimmed away. A line break or another character a
-header can't carry left inside it, such as a control character or a character
-outside Latin-1, fails the alert without sending anything, since a line break
-would let the search result add a header of its own.
+header can't carry left inside it, such as an ASCII control character other
+than tab, or a character outside Latin-1, fails the alert without sending
+anything, since a line break would let the search result add a header of its
+own.
 
 A row may replace the two headers the alert action sets itself:
 ``Content-Type`` (``application/json`` whenever there's a body) and
 ``User-Agent``. It may also replace the ``Accept`` and ``Content-Type`` an
-OAuth credential sends, both ``application/json``. It may not set a header a
-credential sets, such as ``Authorization`` with an OAuth credential, or
+OAuth credential sends, both ``application/json``. It may not set any other
+header a credential sets, such as ``Authorization`` with an OAuth credential, or
 ``Authorization`` when the URL holds a user name and password, nor a header
 another row sets, either. Such an alert fails without sending anything, and
-the log names the header and both sources. Nor can a row set
-``Content-Length``, ``Transfer-Encoding`` or ``Connection``: requests sets
-those itself.
+the log names the header and both sources.
+
+A row can't set ``Content-Length``, ``Transfer-Encoding`` or ``Connection``,
+which requests sets itself: such an alert fails without sending anything.
 
 Header values are saved with the alert in plain text, like the URL. Put a
 secret, such as an API key, in a credential instead.

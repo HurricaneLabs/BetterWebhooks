@@ -21,8 +21,9 @@ HEADER_ROWS = 3
 _FIELD_NAME = re.compile(r"[!#$%&'*+\-.^_`|~0-9A-Za-z]+")
 
 # What a value may hold: tab, printable ASCII and Latin-1. requests sends
-# headers as Latin-1, so anything above U+00FF can't go out, and a control
-# character (CR, LF, NUL and the rest) or DEL could break the header apart.
+# headers as Latin-1, so anything above U+00FF can't go out, and CR, LF,
+# NUL, the other ASCII control characters except tab, or DEL could break the
+# header apart.
 _BAD_VALUE_CHAR = re.compile(r"[^\t\x20-\x7e\x80-\xff]")
 
 # requests sets these from the body and the connection itself; a second copy
@@ -54,8 +55,9 @@ def read_header_rows(configuration: dict) -> list[HeaderRow]:
     Raises:
         HeaderError: A row has a value but no name, a name that isn't a
             header name or is one requests sets itself, or a character a
-            header can't carry inside its value: a line break or other
-            control character, DEL, or anything outside Latin-1.
+            header can't carry inside its value: CR, LF, NUL, the other
+            ASCII control characters except tab, or DEL, or anything above
+            U+00FF.
     """
     rows = []
     for number in range(1, HEADER_ROWS + 1):

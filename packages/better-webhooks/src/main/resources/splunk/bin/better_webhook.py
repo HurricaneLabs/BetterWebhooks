@@ -91,7 +91,8 @@ def send_webhook_request(
     response body: they can carry search results, tokens or ticket data. Nor any
     part of the URL but its host: for some receivers (Slack, for one) the path is
     the secret. The alert's own header rows go out last, so they may replace the
-    automatic Content-Type and User-Agent.
+    automatic Content-Type and User-Agent, and the OAuth credential's Accept and
+    Content-Type.
     """
     if url is None:
         logger.error("No URL provided")

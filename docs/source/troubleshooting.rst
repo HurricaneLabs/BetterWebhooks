@@ -78,8 +78,8 @@ header's value.
    for example ``| eval host=replace(host, "[\r\n]", " ")``.
 
 ``Header 2 (Content-Length) is managed by the HTTP client, so the webhook isn't sent: remove the row``
-   requests sets this header from the body itself; remove the row. The same
-   goes for ``Transfer-Encoding`` and ``Connection``.
+   requests sets this header itself; remove the row. The same goes for
+   ``Transfer-Encoding`` and ``Connection``.
 
 ``Header Authorization is set by both credential my_oauth and the alert's header 1, so the webhook isn't sent``
    Two sources set the same header. Remove one of the two: clear or rename a
