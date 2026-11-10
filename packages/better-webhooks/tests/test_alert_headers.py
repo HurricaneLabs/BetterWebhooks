@@ -221,6 +221,11 @@ def test_each_credential_type_claims_the_headers_it_sets(
             id="leading-space",
         ),
         pytest.param("https://svc@hooks.example.com/x", (), id="user-name-only"),
+        pytest.param(
+            "https://svc:@hooks.example.com/x",
+            ("Authorization",),
+            id="user-and-empty-password",
+        ),
         pytest.param("https://[::1/x", (), id="unbalanced-bracket"),
         pytest.param("", (), id="no-url"),
     ],
