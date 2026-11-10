@@ -81,6 +81,74 @@
         </div>
     </div>
     <div class="control-group">
+        <label class="control-label" for="header_1_name">Header 1</label>
+        <div class="controls">
+            <input
+                type="text"
+                class="input-medium"
+                name="action.better_webhook.param.header_1_name"
+                id="header_1_name"
+                placeholder="X-Source"
+            />
+            <input
+                type="text"
+                class="input-large"
+                name="action.better_webhook.param.header_1_value"
+                id="header_1_value"
+                placeholder="splunk"
+            />
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label" for="header_2_name">Header 2</label>
+        <div class="controls">
+            <input
+                type="text"
+                class="input-medium"
+                name="action.better_webhook.param.header_2_name"
+                id="header_2_name"
+                placeholder="X-Alert-Host"
+            />
+            <input
+                type="text"
+                class="input-large"
+                name="action.better_webhook.param.header_2_value"
+                id="header_2_value"
+                placeholder="$result.host$"
+            />
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label" for="header_3_name">Header 3</label>
+        <div class="controls">
+            <input
+                type="text"
+                class="input-medium"
+                name="action.better_webhook.param.header_3_name"
+                id="header_3_name"
+            />
+            <input
+                type="text"
+                class="input-large"
+                name="action.better_webhook.param.header_3_value"
+                id="header_3_value"
+            />
+        </div>
+    </div>
+    <div class="control-group">
+        <div class="controls">
+            <span
+                class="help-block"
+                style="display: block; position: static; width: auto; margin-left: 0"
+            >
+                Optional headers sent with every webhook: a name and a value each. Values can
+                use tokens such as $result.host$; if one fills in a line break, the alert fails
+                without sending. Values are saved with the alert in plain text, so put a secret
+                in a credential instead.
+            </span>
+        </div>
+    </div>
+    <div class="control-group">
         <label class="control-label" for="better_webhook.credential">Credential</label>
         <div class="controls">
         <splunk-search-dropdown

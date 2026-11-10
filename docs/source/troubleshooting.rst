@@ -58,6 +58,28 @@ search results too, to wherever the receiver points, including a plain ``http://
 address. To find the new address, request the URL yourself, for example with
 ``curl -si -X POST <url>``, and read the ``Location`` header.
 
+Headers that stop an alert
+---------------------------
+
+These errors stop the alert before anything is sent. None of them quotes a
+header's value.
+
+``Header 2 has a value but no name, so the webhook isn't sent``
+   Fill in the row's name, or clear its value.
+
+``Header 2's name isn't a valid header name, so the webhook isn't sent``
+   A header name holds only letters, digits and the symbols
+   ``! # $ % & ' * + - . ^ _ | ~`` and the backquote: no spaces or colons.
+
+``Header 2 (X-Alert-Host) has a line break or NUL in its value, so the webhook isn't sent: check the token it uses``
+   A token in the value filled in text holding a line break, from the search
+   result. Change the search so the field holds one line, for example
+   ``| eval host=replace(host, "[\r\n]", " ")``.
+
+``Header Authorization is set by both credential my_oauth and the alert's header 1, so the webhook isn't sent``
+   Two sources set the same header. Remove the row, or pick a credential that
+   doesn't set that header. The URL's user info sets ``Authorization`` too.
+
 .. _url_wont_parse:
 
 URLs that won't parse

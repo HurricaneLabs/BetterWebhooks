@@ -20,3 +20,18 @@ param.body_failure_regex = <string>
   API or "status":\s*"error".
 * An invalid pattern is logged and ignored; it never fails a delivery.
 * Defaults to empty (disabled).
+
+param.header_1_name = <string>
+param.header_1_value = <string>
+param.header_2_name = <string>
+param.header_2_value = <string>
+param.header_3_name = <string>
+param.header_3_value = <string>
+* Optional headers sent with every webhook: a name and a value each.
+* A row with an empty name is skipped; a value with no name fails the alert.
+* A value may use Splunk tokens. If a value holds a line break or NUL once
+  they're filled in, the alert fails without sending anything.
+* A row may replace the automatic Content-Type and User-Agent headers, but not
+  a header a credential sets, or the Authorization from a URL's user info.
+* Stored in plain text with the alert. Put a secret in a credential instead.
+* Defaults to empty (no header).

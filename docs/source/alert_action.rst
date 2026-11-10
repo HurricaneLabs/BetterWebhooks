@@ -3,9 +3,10 @@
 Alert Action
 =============
 
-The "Better Webhook" alert action has 4 parameters: The URL that the webhook
-will POST to, an optional credential (see :doc:`credentials`), the POST body
-format, and an optional failure pattern.
+The "Better Webhook" alert action has these parameters: the URL that the
+webhook will POST to, an optional credential (see :doc:`credentials`), the
+POST body format, an optional failure pattern, and up to three headers of its
+own.
 
 Body Format
 ------------
@@ -80,6 +81,33 @@ delivery. Leave it empty to turn the check off. An invalid pattern is logged and
 ignored, so it never fails a delivery on its own. In SPL, the parameter is
 ``param.body_failure_regex``.
 
+Headers
+--------
+
+An alert can send up to three headers of its own, in the **Header 1** to
+**Header 3** rows: a name and a value each. For example, to tell the receiver
+which host raised the alert, set a row's name to ``X-Alert-Host`` and its
+value to ``$result.host$``.
+
+Values can use Splunk tokens. Splunk fills them in before the alert action
+runs, so a value can hold anything a search result holds. If a value ends up
+holding a line break, the alert fails without sending anything, since a line
+break would let the search result add a header of its own.
+
+A row may replace the two headers the alert action sets itself:
+``Content-Type`` (``application/json`` whenever there's a body) and
+``User-Agent``. It may not set a header a credential sets, such as
+``Authorization`` with an OAuth credential, or ``Authorization`` when the URL
+holds a user name and password. Such an alert fails without sending anything,
+and the log names the header and both sources.
+
+Header values are saved with the alert in plain text, like the URL. Put a
+secret, such as an API key, in a credential instead.
+
+In SPL, the parameters are ``param.header_1_name`` and
+``param.header_1_value``, through ``param.header_3_name`` and
+``param.header_3_value``.
+
 Using sendalert in SPL
 -----------------------
 
@@ -91,6 +119,8 @@ The alert action can be triggered directly from SPL using the ``| sendalert`` co
    | sendalert better_webhook
        param.url="https://hooks.example.com/webhook"
        param.credential="my_credential_name"
+       param.header_1_name="X-Source"
+       param.header_1_value="splunk"
        param.body_format="$$none$$"
 
 Pass ``param.credential`` as the credential **name** as it appears on the credentials page —
