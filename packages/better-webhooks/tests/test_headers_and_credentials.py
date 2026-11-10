@@ -105,6 +105,28 @@ def test_a_row_replaces_the_automatic_content_type_and_user_agent(
 
 
 @responses.activate
+def test_a_row_replaces_the_oauth_credentials_accept(run_alert: Callable) -> None:
+    """The OAuth credential's Accept and Content-Type are defaults, like the automatic headers."""
+    responses.post(TOKEN_URL, json={"access_token": "tok-1"})
+    responses.post(WEBHOOK_URL, body="ok")
+
+    run = run_alert(
+        alert_settings(
+            ("Accept", "text/plain"), credential="better_webhooks:my_oauth:"
+        ),
+        CREDENTIALS["oauth"],
+    )
+
+    assert run.exit_code == 0, run.log
+    sent = responses.calls[-1].request
+    assert sent.url == WEBHOOK_URL
+    assert (sent.headers["Accept"], sent.headers["Authorization"]) == (
+        "text/plain",
+        "Bearer tok-1",
+    )
+
+
+@responses.activate
 @pytest.mark.parametrize(
     ("kind", "header"),
     [

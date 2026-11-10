@@ -32,8 +32,9 @@ param.header_3_value = <string>
 * A value may use Splunk tokens. If a value holds a line break or another
   character a header can't carry once they're filled in, the alert fails
   without sending anything.
-* A row may replace the automatic Content-Type and User-Agent headers, but not
-  a header a credential sets, or the Authorization from a URL's user info.
+* A row may replace the automatic Content-Type and User-Agent headers, and the
+  Accept and Content-Type an OAuth credential sends, but not a header a
+  credential sets otherwise, or the Authorization from a URL's user info.
 * A row can't set Content-Length, Transfer-Encoding or Connection: requests
   sets those itself, and such a row fails the alert.
 * Stored in plain text with the alert. Put a secret in a credential instead.

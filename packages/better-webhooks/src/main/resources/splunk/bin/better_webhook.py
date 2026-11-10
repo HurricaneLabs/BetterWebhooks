@@ -115,8 +115,10 @@ def send_webhook_request(
 
     headers["User-Agent"] = user_agent
     # requests merges header names case-insensitively and keeps the later
-    # value, so a row replaces an automatic header of any spelling. A row
-    # can't replace a credential's header: check_clashes refused that.
+    # value, so a row replaces a header of any spelling set before it: the
+    # automatic Content-Type and User-Agent, and the OAuth credential's Accept
+    # and Content-Type. A row can't replace a header a credential claims:
+    # check_clashes refused that.
     headers.update((row.name, row.value) for row in header_rows)
     logger.info(
         "Sending POST request to host={} with size={} bytes payload",
