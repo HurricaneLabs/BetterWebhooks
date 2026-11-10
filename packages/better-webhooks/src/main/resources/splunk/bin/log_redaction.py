@@ -94,6 +94,11 @@ def url_parses(url: str, name: str) -> bool:
     https://@tok/tail@host, as none at all, so an @ in urlsplit's host part
     counts as user info too.
 
+    These checks read the text as written, with urlsplit: urllib3's path has
+    any .. removed, along with the segment before it, which can hold the @.
+    A URL with no scheme (a proxy may have none) is read as if it began with
+    //, as urllib3 reads it; urlsplit would find no host part at all.
+
     Args:
         url: The URL.
         name: What the URL is for, as the log line names it ("webhook").
@@ -104,13 +109,14 @@ def url_parses(url: str, name: str) -> bool:
     url = url.lstrip()
     try:
         parsed = parse_url(url)
-        netloc = urlsplit(url).netloc
-        has_user_info = parsed.auth is not None or "@" in netloc
-        after_host = (parsed.path or "") + (parsed.query or "")
+        # urllib3 adds // to a URL that doesn't start with a scheme or a /
+        no_scheme = parsed.scheme is None and not url.startswith("/")
+        parts = urlsplit("//" + url if no_scheme else url)
+        has_user_info = parsed.auth is not None or "@" in parts.netloc
         refused = (
-            "\\" in netloc
-            or "@" in (parsed.fragment or "")
-            or (has_user_info and "@" in after_host)
+            "\\" in parts.netloc
+            or "@" in parts.fragment
+            or (has_user_info and "@" in parts.path + parts.query)
         )
     # LocationParseError is a ValueError; urlsplit raises one on an unbalanced [
     except ValueError:

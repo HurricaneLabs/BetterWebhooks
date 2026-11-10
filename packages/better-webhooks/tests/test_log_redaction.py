@@ -82,6 +82,20 @@ def test_a_backslash_is_refused_only_before_the_path(url: str, parses: bool) -> 
         pytest.param(
             "https://@hooks.example.com/a@b", False, id="empty-user-info-and-at-in-path"
         ),
+        # urllib3 drops the .. and the segment before it, so its path has no @
+        pytest.param(
+            "https://svc:pw@hooks.example.com/a@b/..",
+            False,
+            id="user-info-and-at-before-dot-dot",
+        ),
+        # A proxy may have no scheme; urllib3 reads it as if it began with //
+        pytest.param("svc_user:pw@proxy.example:3128", True, id="no-scheme-proxy"),
+        pytest.param(
+            "@proxy.example:3128/a@b", False, id="no-scheme-empty-user-info-and-at"
+        ),
+        pytest.param(
+            "CORP\\jdoe:pw@proxy.example:3128", False, id="no-scheme-domain-user"
+        ),
     ],
 )
 def test_an_at_after_the_host_is_refused_where_it_could_end_the_user_info(

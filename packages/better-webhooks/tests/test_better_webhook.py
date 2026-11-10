@@ -71,9 +71,14 @@ AT_USER_INFO_SHAPES = [
 AT_USER_INFO = [pytest.param(info, id=name) for info, name in AT_USER_INFO_SHAPES]
 
 
-def at_url(scheme: str, user_info: str, host: str) -> str:
+# urllib3 drops a .. and the path segment before it, which can be the one
+# holding the @, so each shape is also tried with a .. right after the host
+AT_PATHS = [pytest.param("/x", id="path"), pytest.param("/..", id="dot-dot")]
+
+
+def at_url(scheme: str, user_info: str, host: str, path: str = "/x") -> str:
     """Build a URL whose user info an @ and then a raw cut character make ambiguous."""
-    return f"{scheme}://{user_info}@{host}/x"
+    return f"{scheme}://{user_info}@{host}{path}"
 
 
 def secret_url(host: str, path: str = "/services/T0/B0") -> str:
@@ -460,13 +465,25 @@ UNPARSEABLE_PROXIES = [
         f"http://user:{URL_PASSWORD_SECRET}@proxy.example:99999", id="port-99999"
     ),
     *(
-        pytest.param(at_url("http", info, "proxy.example:3128"), id=f"at-{name}")
+        pytest.param(
+            at_url("http", info, "proxy.example:3128", path), id=f"at-{name}{tag}"
+        )
         for info, name in AT_USER_INFO_SHAPES
+        for path, tag in (("/x", ""), ("/..", "-dot-dot"))
     ),
-    # requests adds http:// to a proxy with no scheme
+    # requests adds http:// to a proxy with no scheme, and urllib3 reads one
+    # as if it began with //
     pytest.param(
         f"svc_user:P@{AT_HOST}\\{AT_TAIL}@proxy.example:3128",
         id="no-scheme-at-backslash",
+    ),
+    pytest.param(
+        f"@{AT_HOST}/{AT_TAIL}@proxy.example:3128", id="no-scheme-empty-user-info"
+    ),
+    # a Windows domain user: urllib3 ends the host part at the \
+    pytest.param(
+        f"{AT_HOST}\\{AT_TAIL}:{URL_PASSWORD_SECRET}@proxy.example:3128",
+        id="no-scheme-domain-user",
     ),
 ]
 
@@ -587,13 +604,16 @@ def test_a_proxy_url_with_a_backslash_before_its_host_is_refused(
 
 
 @responses.activate
+@pytest.mark.parametrize("path", AT_PATHS)
 @pytest.mark.parametrize("user_info", AT_USER_INFO)
 def test_a_webhook_url_with_an_at_before_a_cut_is_refused(
-    run_alert: Callable, user_info: str
+    run_alert: Callable, user_info: str, path: str
 ) -> None:
     """requests would send to, and log, the text between the @ and the cut as the host."""
     settings = alert_settings()
-    settings["configuration"]["url"] = at_url("https", user_info, "hooks.example.com")
+    settings["configuration"]["url"] = at_url(
+        "https", user_info, "hooks.example.com", path
+    )
 
     run = run_alert(settings)
 
@@ -605,16 +625,17 @@ def test_a_webhook_url_with_an_at_before_a_cut_is_refused(
 
 
 @responses.activate
+@pytest.mark.parametrize("path", AT_PATHS)
 @pytest.mark.parametrize("user_info", AT_USER_INFO)
 def test_a_token_url_with_an_at_before_a_cut_is_refused(
-    run_alert: Callable, user_info: str
+    run_alert: Callable, user_info: str, path: str
 ) -> None:
     """The token request would carry the client secret to the text between the @ and the cut."""
     credential = {
         "type": "oauth",
         "oauth_client_id": "client",
         "oauth_client_secret": CREDENTIAL_SECRET,
-        "oauth_token_url": at_url("https", user_info, "idp.example"),
+        "oauth_token_url": at_url("https", user_info, "idp.example", path),
     }
 
     run = run_alert(alert_settings(credential="better_webhooks:cred:"), credential)
