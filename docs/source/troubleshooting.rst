@@ -66,13 +66,14 @@ URLs that won't parse
 A webhook, proxy or token URL that can't be parsed fails the alert before any
 request uses it, with an error like::
 
-    The proxy URL won't parse, so it isn't used: check its host and port, and percent-encode any #, /, ?, \ or @ in its user name or password, and any @ after its host
+    The proxy URL won't parse, so it isn't used: check its host and port, and percent-encode any #, /, ?, \, @, [ or ] in its user name or password, and any @ after its host
 
 A ``#``, ``/``, ``?`` or ``\`` in a user name or password ends the URL's host
 part early, so write it percent-encoded: ``%23``, ``%2F``, ``%3F`` and ``%5C``.
-Write an ``@`` in a user name or password as ``%40``. For example, the password
-``P@ss#2026`` goes in the URL as ``P%40ss%232026``. The error doesn't quote the
-URL, because the part it would quote is the start of the password.
+Write an ``@`` in a user name or password as ``%40``, and a ``[`` or ``]`` as
+``%5B`` or ``%5D`` (brackets belong only around an IPv6 host). For example, the
+password ``P@ss#2026`` goes in the URL as ``P%40ss%232026``. The error doesn't
+quote the URL, because the part it would quote is the start of the password.
 
 A URL with a user name or password also can't have a raw ``@`` anywhere after
 its host, and no URL can have one after a ``#``: write those as ``%40`` too.

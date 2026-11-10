@@ -124,8 +124,8 @@ def url_parses(url: str, name: str) -> bool:
     if refused:
         logger.error(
             "The {} URL won't parse, so it isn't used: check its host and port, "
-            "and percent-encode any #, /, ?, \\ or @ in its user name or password, "
-            "and any @ after its host",
+            "and percent-encode any #, /, ?, \\, @, [ or ] in its user name or "
+            "password, and any @ after its host",
             name,
         )
         return False

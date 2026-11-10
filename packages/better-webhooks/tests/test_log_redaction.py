@@ -46,6 +46,12 @@ def test_a_url_with_a_leading_space_is_checked_as_requests_sends_it(
         pytest.param(
             "https://svc:pa[ss@hooks.example.com/x", False, id="bracket-in-password"
         ),
+        pytest.param(
+            "svc_user:pa[ss@proxy.example:3128", False, id="bracket-no-scheme"
+        ),
+        pytest.param(
+            "svc_user:pa%5Bss@proxy.example:3128", True, id="encoded-bracket-no-scheme"
+        ),
     ],
 )
 def test_a_backslash_is_refused_only_before_the_path(url: str, parses: bool) -> None:
@@ -103,3 +109,14 @@ def test_an_at_after_the_host_is_refused_where_it_could_end_the_user_info(
 ) -> None:
     """Both parsers split user info at its last @, so a cut ahead of one moves the host."""
     assert url_parses(url, "webhook") is parses
+
+
+def test_the_refusal_names_every_character_to_percent_encode(
+    log_lines: list[str],
+) -> None:
+    """The message is all a user gets, since it can't quote the URL, so it names each character to fix."""
+    assert url_parses("svc_user:pa[ss@proxy.example:3128", "proxy") is False
+
+    (line,) = [line for line in log_lines if "proxy URL won't parse" in line]
+    for char in ("#", "/", "?", "\\", "@", "[", "]"):
+        assert char in line
