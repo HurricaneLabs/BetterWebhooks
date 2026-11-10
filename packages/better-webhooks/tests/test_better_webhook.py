@@ -648,7 +648,9 @@ def test_a_token_url_with_an_at_before_a_cut_is_refused(
 
 
 # With no scheme and a user name that could be one, urllib3 reads svc: as the
-# scheme, finds no host, and the check has nothing to refuse: requests must
+# scheme and finds no host, so url_parses has nothing to refuse. This test
+# covers requests' own guard instead: it raises InvalidProxyURL without
+# quoting the URL.
 def test_a_proxy_url_whose_user_name_reads_as_its_scheme_keeps_the_password_out(
     run_alert: Callable,
 ) -> None:
