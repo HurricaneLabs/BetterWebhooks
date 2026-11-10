@@ -161,6 +161,10 @@ def test_a_row_naming_a_header_the_credential_sets_refuses_the_alert_unsent(
     ) in run.log
     assert "from-the-alert" not in run.log
     assert CLIENT_SECRET not in run.log
+    assert [line for line in run.log.splitlines() if line.startswith("ERROR")] == [
+        f"ERROR Header {header} is set by both credential my_{kind} and the alert's "
+        "header 1, so the webhook isn't sent"
+    ]
 
 
 @responses.activate
@@ -197,6 +201,7 @@ def test_a_search_result_putting_a_line_break_in_a_row_refuses_the_alert_unsent(
         "can't carry in its value, so the webhook isn't sent: check the token it uses"
     ) in run.log
     assert INJECTED not in run.log
+    assert len([line for line in run.log.splitlines() if line.startswith("ERROR")]) == 1
 
 
 @responses.activate
