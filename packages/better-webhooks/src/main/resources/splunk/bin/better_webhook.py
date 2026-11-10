@@ -14,7 +14,7 @@ from urllib.parse import quote, urlparse
 import requests
 import splunk.rest  # type: ignore
 from hmac_helper import get_hmac_headers
-from log_redaction import register_secret, register_url, url_host
+from log_redaction import register_secret, register_url, url_host, url_parses
 from oauth_helper import REQUEST_TIMEOUT, OAuthTokenError, get_oauth_headers
 from splunk.clilib import cli_common as cli  # type: ignore
 from urllib3.exceptions import ReadTimeoutError
@@ -82,6 +82,8 @@ def send_webhook_request(
     """
     if url is None:
         logger.error("No URL provided")
+        return False
+    if not url_parses(url, "webhook") or (proxy and not url_parses(proxy, "proxy")):
         return False
     register_url(url)
 
@@ -290,7 +292,7 @@ if __name__ == "__main__":
                     scope=oauth_scope,
                     proxy=proxy,
                 )
-            # ValueError: the token URL isn't HTTPS
+            # ValueError: the token or proxy URL won't parse, or the token URL isn't HTTPS
             except (OAuthTokenError, ValueError):
                 logger.error(
                     "Failed to obtain OAuth token for credential {}, cannot send webhook. {}",

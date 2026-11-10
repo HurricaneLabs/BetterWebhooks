@@ -7,7 +7,7 @@ import requests
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "lib"))
 
-from log_redaction import register_secret, register_url, url_host
+from log_redaction import register_secret, register_url, url_host, url_parses
 from loguru import logger
 
 # Seconds to wait for a connection, then for each read of the reply, on both of
@@ -33,6 +33,12 @@ def get_oauth_headers(
     Goes through ``proxy`` when one is set, like the webhook itself.
     Logs status and errors, naming the token URL by its host alone; raises on failure.
     """
+    # Raised here, not from an except: a chained error would quote the URL
+    if not url_parses(token_url, "OAuth token"):
+        raise ValueError("OAuth token URL won't parse")
+    if proxy and not url_parses(proxy, "proxy"):
+        raise ValueError("Proxy URL won't parse")
+
     # Its path, query or user:password@ can hold a key, and errors quote them
     register_url(token_url)
     host = url_host(token_url)

@@ -32,6 +32,23 @@ URL_QUERY_SECRET = "SEKRET-url-query-c58d"
 URL_PASSWORD_SECRET = "SEKRET-url-password-2e94"
 URL_SECRETS = (URL_PATH_SECRET, URL_QUERY_SECRET, URL_PASSWORD_SECRET)
 
+# A raw #, /, ? or \ in a URL's password ends its host part early, so a parser
+# reads the user name and the start of the password as a host and port. One
+# marker on each side of the cut.
+PASSWORD_HEAD = "SEKRET-password-head-5c0e"
+PASSWORD_TAIL = "SEKRET-password-tail-a9d4"
+PASSWORD_CUTS = [
+    pytest.param("#", id="hash"),
+    pytest.param("/", id="slash"),
+    pytest.param("?", id="question-mark"),
+    pytest.param("\\", id="backslash"),
+]
+
+
+def cut_password_url(scheme: str, host: str, cut: str) -> str:
+    """Build a URL whose password holds a raw ``cut`` character, which cuts it short."""
+    return f"{scheme}://svc:{PASSWORD_HEAD}{cut}{PASSWORD_TAIL}@{host}/x"
+
 
 def secret_url(host: str, path: str = "/services/T0/B0") -> str:
     """Build an https URL with a secret in its userinfo, path and query.
@@ -356,6 +373,226 @@ def test_an_unreachable_token_url_stays_out_of_the_log(
         assert secret not in run.log
 
 
+@responses.activate
+@pytest.mark.parametrize("cut", PASSWORD_CUTS)
+def test_a_webhook_url_that_does_not_parse_fails_with_no_part_of_its_password_logged(
+    run_alert: Callable, cut: str
+) -> None:
+    """A parser would take the user name and the password's start for the host and port, and log them."""
+    settings = alert_settings()
+    settings["configuration"]["url"] = cut_password_url(
+        "https", "hooks.example.com", cut
+    )
+
+    run = run_alert(settings)
+
+    assert run.exit_code == 2
+    assert "webhook URL won't parse" in run.log
+    assert len(responses.calls) == 0
+    assert PASSWORD_HEAD not in run.log
+    assert PASSWORD_TAIL not in run.log
+
+
+@responses.activate
+@pytest.mark.parametrize("cut", PASSWORD_CUTS)
+def test_a_token_url_that_does_not_parse_fails_with_no_part_of_its_password_logged(
+    run_alert: Callable, cut: str
+) -> None:
+    """The token step's traceback goes to the log whole, so its error must not quote the URL either."""
+    credential = {
+        "type": "oauth",
+        "oauth_client_id": "client",
+        "oauth_client_secret": CREDENTIAL_SECRET,
+        "oauth_token_url": cut_password_url("https", "idp.example", cut),
+    }
+
+    run = run_alert(alert_settings(credential="better_webhooks:cred:"), credential)
+
+    assert run.exit_code == 2
+    assert "OAuth token URL won't parse" in run.log
+    assert "Failed to obtain OAuth token" in run.log
+    assert len(responses.calls) == 0
+    for secret in (PASSWORD_HEAD, PASSWORD_TAIL, CREDENTIAL_SECRET):
+        assert secret not in run.log
+
+
+# Proxy URLs urllib3 won't parse: a password cut short, on any scheme (requests'
+# own URL check skips all but http and https), and a port that is no port.
+# requests quotes all or part of each in its error.
+UNPARSEABLE_PROXIES = [
+    pytest.param(cut_password_url("http", "proxy.example:3128", "#"), id="hash"),
+    pytest.param(cut_password_url("http", "proxy.example:3128", "/"), id="slash"),
+    pytest.param(
+        cut_password_url("http", "proxy.example:3128", "?"), id="question-mark"
+    ),
+    pytest.param(cut_password_url("http", "proxy.example:3128", "\\"), id="backslash"),
+    pytest.param(
+        cut_password_url("socks5", "proxy.example:1080", "#"), id="socks5-hash"
+    ),
+    pytest.param(f"http://user:{URL_PASSWORD_SECRET}@proxy.example:80a", id="port-80a"),
+    pytest.param(
+        f"http://user:{URL_PASSWORD_SECRET}@proxy.example:99999", id="port-99999"
+    ),
+]
+
+
+# No responses here: it replaces the HTTP adapter's send(), which is where
+# requests parses the proxy, so the error these tests guard against never happens.
+@pytest.mark.parametrize("proxy", UNPARSEABLE_PROXIES)
+def test_a_proxy_url_that_does_not_parse_fails_the_token_step_with_no_password_logged(
+    run_alert: Callable, proxy: str
+) -> None:
+    """The token request runs before the webhook, so its check is the first the proxy meets."""
+    credential = {
+        "type": "oauth",
+        "oauth_client_id": "client",
+        "oauth_client_secret": CREDENTIAL_SECRET,
+        "oauth_token_url": TOKEN_URL,
+    }
+
+    run = run_alert(
+        alert_settings(credential="better_webhooks:cred:"), credential, proxy=proxy
+    )
+
+    assert run.exit_code == 2
+    assert "proxy URL won't parse" in run.log
+    assert "Failed to obtain OAuth token" in run.log
+    for secret in (URL_PASSWORD_SECRET, PASSWORD_HEAD, PASSWORD_TAIL):
+        assert secret not in run.log
+
+
+@pytest.mark.parametrize("proxy", UNPARSEABLE_PROXIES)
+def test_a_proxy_url_that_does_not_parse_fails_the_delivery_with_no_password_logged(
+    run_alert: Callable, proxy: str
+) -> None:
+    """With no OAuth credential, the webhook request is the first to use the proxy."""
+    run = run_alert(alert_settings(), proxy=proxy)
+
+    assert run.exit_code == 2
+    assert "proxy URL won't parse" in run.log
+    for secret in (URL_PASSWORD_SECRET, PASSWORD_HEAD, PASSWORD_TAIL):
+        assert secret not in run.log
+
+
+# urllib3 ends a URL's host part at a raw \ and urlsplit doesn't, so the text
+# before the \ reads as the host: lower case here, as urllib3 logs it. Each
+# shape is user info that a \ cuts short, ahead of the real host.
+BACKSLASH_HOST = "sekret-backslash-host-7b2e"
+BACKSLASH_PORT = "48213"
+BACKSLASH_TAIL = "sekret-backslash-tail-e61c"
+BACKSLASH_SECRETS = (BACKSLASH_HOST, BACKSLASH_PORT, BACKSLASH_TAIL)
+BACKSLASH_USER_INFO = [
+    pytest.param(f"admin:Wint3r@{BACKSLASH_HOST}", id="at-before-backslash"),
+    pytest.param(f"admin:{BACKSLASH_PORT}", id="all-digit-password-head"),
+    pytest.param(BACKSLASH_HOST, id="user-name-only"),
+]
+
+
+def backslash_url(scheme: str, user_info: str, host: str) -> str:
+    """Build a URL whose user info a raw \\ cuts short."""
+    return f"{scheme}://{user_info}\\{BACKSLASH_TAIL}@{host}/x"
+
+
+@responses.activate
+@pytest.mark.parametrize("user_info", BACKSLASH_USER_INFO)
+def test_a_webhook_url_with_a_backslash_before_its_host_is_refused(
+    run_alert: Callable, user_info: str
+) -> None:
+    """urllib3 would send to, and log, the text before the \\ as the host."""
+    settings = alert_settings()
+    settings["configuration"]["url"] = backslash_url(
+        "https", user_info, "hooks.example.com"
+    )
+
+    run = run_alert(settings)
+
+    assert run.exit_code == 2
+    assert "webhook URL won't parse" in run.log
+    assert len(responses.calls) == 0
+    for secret in BACKSLASH_SECRETS:
+        assert secret not in run.log.lower()
+
+
+@responses.activate
+@pytest.mark.parametrize("user_info", BACKSLASH_USER_INFO)
+def test_a_token_url_with_a_backslash_before_its_host_is_refused(
+    run_alert: Callable, user_info: str
+) -> None:
+    """The token request would carry the client secret to the text before the \\."""
+    credential = {
+        "type": "oauth",
+        "oauth_client_id": "client",
+        "oauth_client_secret": CREDENTIAL_SECRET,
+        "oauth_token_url": backslash_url("https", user_info, "idp.example"),
+    }
+
+    run = run_alert(alert_settings(credential="better_webhooks:cred:"), credential)
+
+    assert run.exit_code == 2
+    assert "OAuth token URL won't parse" in run.log
+    assert len(responses.calls) == 0
+    for secret in (*BACKSLASH_SECRETS, CREDENTIAL_SECRET):
+        assert secret not in run.log.lower()
+
+
+def test_a_proxy_url_with_a_backslash_before_its_host_is_refused(
+    run_alert: Callable,
+) -> None:
+    """requests would connect to the text before the \\ as the proxy, and quote it."""
+    proxy = backslash_url(
+        "http", f"admin:Wint3r@{BACKSLASH_HOST}", "proxy.example:3128"
+    )
+
+    run = run_alert(alert_settings(), proxy=proxy)
+
+    assert run.exit_code == 2
+    assert "proxy URL won't parse" in run.log
+    for secret in BACKSLASH_SECRETS:
+        assert secret not in run.log.lower()
+
+
+# urlsplit deletes the tab and finds svc:<password head> as the host; urllib3,
+# which requests parses with, keeps it and finds no host at all
+TAB_URL = f"https:/\t/svc:{PASSWORD_HEAD}#{PASSWORD_TAIL}@hooks.example.com/x"
+
+
+@responses.activate
+def test_a_webhook_url_urlsplit_reads_another_way_keeps_its_password_out_of_the_log(
+    run_alert: Callable,
+) -> None:
+    """The host logged is the one requests reads, not urlsplit's."""
+    settings = alert_settings()
+    settings["configuration"]["url"] = TAB_URL
+
+    run = run_alert(settings)
+
+    assert run.exit_code == 2
+    assert len(responses.calls) == 0
+    assert PASSWORD_HEAD not in run.log
+    assert PASSWORD_TAIL not in run.log
+
+
+@responses.activate
+def test_a_token_url_urlsplit_reads_another_way_keeps_its_password_out_of_the_log(
+    run_alert: Callable,
+) -> None:
+    """The token request logs its host too, before requests refuses the URL."""
+    credential = {
+        "type": "oauth",
+        "oauth_client_id": "client",
+        "oauth_client_secret": CREDENTIAL_SECRET,
+        "oauth_token_url": TAB_URL,
+    }
+
+    run = run_alert(alert_settings(credential="better_webhooks:cred:"), credential)
+
+    assert run.exit_code == 2
+    assert "Failed to obtain OAuth token" in run.log
+    assert len(responses.calls) == 0
+    for secret in (PASSWORD_HEAD, PASSWORD_TAIL, CREDENTIAL_SECRET):
+        assert secret not in run.log
+
+
 class _RefusingProxy(http.server.HTTPServer):
     """An HTTP proxy on localhost that refuses every tunnel and remembers where it led."""
 
@@ -421,31 +658,6 @@ def test_the_oauth_token_request_goes_through_the_proxy(
     assert "Failed to obtain OAuth token" in run.log
 
 
-@pytest.mark.parametrize("port", ["80a", "99999"])
-def test_a_proxy_url_that_does_not_parse_keeps_its_password_out_of_the_token_step_log(
-    run_alert: Callable, port: str
-) -> None:
-    """The token request runs before the webhook, so its error is the first to quote the proxy URL."""
-    credential = {
-        "type": "oauth",
-        "oauth_client_id": "client",
-        "oauth_client_secret": CREDENTIAL_SECRET,
-        "oauth_token_url": TOKEN_URL,
-    }
-
-    run = run_alert(
-        alert_settings(credential="better_webhooks:cred:"),
-        credential,
-        proxy=f"http://user:{URL_PASSWORD_SECRET}@proxy.example:{port}",
-    )
-
-    assert run.exit_code == 2
-    assert "Failed to obtain OAuth token" in run.log
-    # The token step used the proxy: it's the proxy URL that fails to parse
-    assert "InvalidURL" in run.log
-    assert URL_PASSWORD_SECRET not in run.log
-
-
 class _OkHandler(http.server.BaseHTTPRequestHandler):
     """A webhook receiver that accepts every POST."""
 
@@ -489,25 +701,6 @@ def test_a_header_value_http_cannot_encode_fails_the_delivery(
 
     assert delivered is False
     assert any("UnicodeEncodeError" in line for line in log_lines)
-
-
-@pytest.mark.parametrize("port", ["80a", "99999"])
-def test_a_proxy_url_that_does_not_parse_keeps_its_password_out_of_the_log(
-    log_lines: list[str], port: str
-) -> None:
-    """requests quotes the whole proxy URL, password included, when its port won't parse."""
-    delivered = send_webhook_request(
-        WEBHOOK_URL,
-        b"{}",
-        {},
-        None,
-        user_agent="Splunk",
-        proxy=f"http://user:{URL_PASSWORD_SECRET}@proxy.example:{port}",
-    )
-
-    assert delivered is False
-    assert any("InvalidURL" in line for line in log_lines)
-    assert not any(URL_PASSWORD_SECRET in line for line in log_lines)
 
 
 @pytest.mark.usefixtures("short_timeout")
