@@ -50,6 +50,32 @@ def cut_password_url(scheme: str, host: str, cut: str) -> str:
     return f"{scheme}://svc:{PASSWORD_HEAD}{cut}{PASSWORD_TAIL}@{host}/x"
 
 
+# An @ ahead of the cut leaves a URL that parses, but both parsers split user
+# info at its last @, so the text between the @ and the cut reads as the host.
+# Lower case, as urllib3 logs a host.
+AT_HOST = "sekret-at-host-4d1a"
+AT_TAIL = "sekret-at-tail-90c3"
+AT_SECRETS = (AT_HOST, AT_TAIL)
+# (user info, test id)
+AT_USER_INFO_SHAPES = [
+    (f"svc:P@{AT_HOST}#{AT_TAIL}", "hash"),
+    (f"svc:P@{AT_HOST}/{AT_TAIL}", "slash"),
+    (f"svc:P@{AT_HOST}?{AT_TAIL}", "question-mark"),
+    (f"svc:P@{AT_HOST}\\{AT_TAIL}", "backslash"),
+    # a token used as the user name, with no password
+    (f"{AT_HOST}#{AT_TAIL}", "user-name-only-hash"),
+    # urllib3 reads an empty user info as none at all
+    (f"@{AT_HOST}/{AT_TAIL}", "empty-user-info-slash"),
+    (f"@{AT_HOST}?{AT_TAIL}", "empty-user-info-question-mark"),
+]
+AT_USER_INFO = [pytest.param(info, id=name) for info, name in AT_USER_INFO_SHAPES]
+
+
+def at_url(scheme: str, user_info: str, host: str) -> str:
+    """Build a URL whose user info an @ and then a raw cut character make ambiguous."""
+    return f"{scheme}://{user_info}@{host}/x"
+
+
 def secret_url(host: str, path: str = "/services/T0/B0") -> str:
     """Build an https URL with a secret in its userinfo, path and query.
 
@@ -433,6 +459,15 @@ UNPARSEABLE_PROXIES = [
     pytest.param(
         f"http://user:{URL_PASSWORD_SECRET}@proxy.example:99999", id="port-99999"
     ),
+    *(
+        pytest.param(at_url("http", info, "proxy.example:3128"), id=f"at-{name}")
+        for info, name in AT_USER_INFO_SHAPES
+    ),
+    # requests adds http:// to a proxy with no scheme
+    pytest.param(
+        f"svc_user:P@{AT_HOST}\\{AT_TAIL}@proxy.example:3128",
+        id="no-scheme-at-backslash",
+    ),
 ]
 
 
@@ -457,8 +492,8 @@ def test_a_proxy_url_that_does_not_parse_fails_the_token_step_with_no_password_l
     assert run.exit_code == 2
     assert "proxy URL won't parse" in run.log
     assert "Failed to obtain OAuth token" in run.log
-    for secret in (URL_PASSWORD_SECRET, PASSWORD_HEAD, PASSWORD_TAIL):
-        assert secret not in run.log
+    for secret in (URL_PASSWORD_SECRET, PASSWORD_HEAD, PASSWORD_TAIL, *AT_SECRETS):
+        assert secret.lower() not in run.log.lower()
 
 
 @pytest.mark.parametrize("proxy", UNPARSEABLE_PROXIES)
@@ -470,8 +505,8 @@ def test_a_proxy_url_that_does_not_parse_fails_the_delivery_with_no_password_log
 
     assert run.exit_code == 2
     assert "proxy URL won't parse" in run.log
-    for secret in (URL_PASSWORD_SECRET, PASSWORD_HEAD, PASSWORD_TAIL):
-        assert secret not in run.log
+    for secret in (URL_PASSWORD_SECRET, PASSWORD_HEAD, PASSWORD_TAIL, *AT_SECRETS):
+        assert secret.lower() not in run.log.lower()
 
 
 # urllib3 ends a URL's host part at a raw \ and urlsplit doesn't, so the text
@@ -548,6 +583,62 @@ def test_a_proxy_url_with_a_backslash_before_its_host_is_refused(
     assert run.exit_code == 2
     assert "proxy URL won't parse" in run.log
     for secret in BACKSLASH_SECRETS:
+        assert secret not in run.log.lower()
+
+
+@responses.activate
+@pytest.mark.parametrize("user_info", AT_USER_INFO)
+def test_a_webhook_url_with_an_at_before_a_cut_is_refused(
+    run_alert: Callable, user_info: str
+) -> None:
+    """requests would send to, and log, the text between the @ and the cut as the host."""
+    settings = alert_settings()
+    settings["configuration"]["url"] = at_url("https", user_info, "hooks.example.com")
+
+    run = run_alert(settings)
+
+    assert run.exit_code == 2
+    assert "webhook URL won't parse" in run.log
+    assert len(responses.calls) == 0
+    for secret in AT_SECRETS:
+        assert secret not in run.log.lower()
+
+
+@responses.activate
+@pytest.mark.parametrize("user_info", AT_USER_INFO)
+def test_a_token_url_with_an_at_before_a_cut_is_refused(
+    run_alert: Callable, user_info: str
+) -> None:
+    """The token request would carry the client secret to the text between the @ and the cut."""
+    credential = {
+        "type": "oauth",
+        "oauth_client_id": "client",
+        "oauth_client_secret": CREDENTIAL_SECRET,
+        "oauth_token_url": at_url("https", user_info, "idp.example"),
+    }
+
+    run = run_alert(alert_settings(credential="better_webhooks:cred:"), credential)
+
+    assert run.exit_code == 2
+    assert "OAuth token URL won't parse" in run.log
+    assert len(responses.calls) == 0
+    for secret in (*AT_SECRETS, CREDENTIAL_SECRET):
+        assert secret.lower() not in run.log.lower()
+
+
+# With no scheme and a user name that could be one, urllib3 reads svc: as the
+# scheme, finds no host, and the check has nothing to refuse: requests must
+def test_a_proxy_url_whose_user_name_reads_as_its_scheme_keeps_the_password_out(
+    run_alert: Callable,
+) -> None:
+    """requests refuses the proxy itself; its error mustn't quote the password."""
+    proxy = f"svc:P@{AT_HOST}\\{AT_TAIL}@proxy.example:3128"
+
+    run = run_alert(alert_settings(), proxy=proxy)
+
+    assert run.exit_code == 2
+    assert "InvalidProxyURL" in run.log
+    for secret in AT_SECRETS:
         assert secret not in run.log.lower()
 
 
