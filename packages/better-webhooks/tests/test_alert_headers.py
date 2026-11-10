@@ -82,18 +82,36 @@ def test_a_name_that_is_not_a_header_name_is_refused_without_quoting_it(
         pytest.param("web01\nX-Original-URL: /admin", id="line-feed"),
         pytest.param("web01\rX-Original-URL: /admin", id="carriage-return"),
         pytest.param("web01\x00X-Original-URL: /admin", id="nul"),
+        pytest.param("a\x0bX-Injected: 1", id="vertical-tab"),
+        pytest.param("a\x1b[31mb", id="escape"),
+        pytest.param("a\x7fb", id="delete"),
+        pytest.param("José→Admin", id="non-latin-1"),
     ],
 )
-def test_a_line_break_or_nul_inside_a_value_is_refused_without_quoting_it(
+def test_a_character_a_header_cant_carry_inside_a_value_is_refused_without_quoting_it(
     value: str,
 ) -> None:
-    """A token filled from a search result can hold one, which would start a header nobody wrote."""
+    """A token filled from a search result can hold one: a line break would start a header nobody wrote."""
     with pytest.raises(HeaderError) as refused:
         read_header_rows(configuration(("X-Alert-Host", value)))
     assert str(refused.value) == (
-        "Header 1 (X-Alert-Host) has a line break or NUL in its value, "
-        "so the webhook isn't sent: check the token it uses"
+        "Header 1 (X-Alert-Host) has a line break or another character a header "
+        "can't carry in its value, so the webhook isn't sent: check the token it uses"
     )
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        pytest.param("José", id="latin-1"),
+        pytest.param("a\tb", id="tab-inside"),
+    ],
+)
+def test_a_latin_1_value_or_one_with_a_tab_inside_is_accepted(value: str) -> None:
+    """requests sends header values as Latin-1, and a tab is legal inside one."""
+    assert read_header_rows(configuration(("X-Alert-Host", value))) == [
+        HeaderRow(1, "X-Alert-Host", value)
+    ]
 
 
 def test_a_line_break_at_either_end_of_a_value_is_trimmed_away() -> None:

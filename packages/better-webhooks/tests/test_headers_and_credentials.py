@@ -168,8 +168,35 @@ def test_a_search_result_putting_a_line_break_in_a_row_refuses_the_alert_unsent(
 
     assert run.exit_code == 2
     assert len(responses.calls) == 0
-    assert "Header 1 (X-Alert-Host) has a line break or NUL in its value" in run.log
+    assert (
+        "Header 1 (X-Alert-Host) has a line break or another character a header "
+        "can't carry in its value, so the webhook isn't sent: check the token it uses"
+    ) in run.log
     assert INJECTED not in run.log
+
+
+@responses.activate
+def test_a_value_outside_latin_1_refuses_the_alert_before_the_token_request(
+    run_alert: Callable,
+) -> None:
+    """requests can't send it, so the alert stops before the OAuth credential fetches a token."""
+    responses.post(TOKEN_URL, json={"access_token": "tok-1"})
+    responses.post(WEBHOOK_URL, body="ok")
+
+    run = run_alert(
+        alert_settings(
+            ("X-Role", "José→Admin"), credential="better_webhooks:my_oauth:"
+        ),
+        CREDENTIALS["oauth"],
+    )
+
+    assert run.exit_code == 2
+    assert len(responses.calls) == 0
+    assert (
+        "Header 1 (X-Role) has a line break or another character a header "
+        "can't carry in its value, so the webhook isn't sent: check the token it uses"
+    ) in run.log
+    assert "José→Admin" not in run.log
 
 
 @responses.activate

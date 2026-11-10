@@ -20,6 +20,11 @@ HEADER_ROWS = 3
 # RFC 9110 field-name: one or more tchar
 _FIELD_NAME = re.compile(r"[!#$%&'*+\-.^_`|~0-9A-Za-z]+")
 
+# What a value may hold: tab, printable ASCII and Latin-1. requests sends
+# headers as Latin-1, so anything above U+00FF can't go out, and a control
+# character (CR, LF, NUL and the rest) or DEL could break the header apart.
+_BAD_VALUE_CHAR = re.compile(r"[^\t\x20-\x7e\x80-\xff]")
+
 
 class HeaderError(Exception):
     """The alert's headers can't be sent as configured. The message quotes no header value."""
@@ -44,7 +49,9 @@ def read_header_rows(configuration: dict) -> list[HeaderRow]:
 
     Raises:
         HeaderError: A row has a value but no name, a name that isn't a
-            header name, or a line break or NUL inside its value.
+            header name, or a character a header can't carry inside its
+            value: a line break or other control character, DEL, or
+            anything outside Latin-1.
     """
     rows = []
     for number in range(1, HEADER_ROWS + 1):
@@ -61,10 +68,11 @@ def read_header_rows(configuration: dict) -> list[HeaderRow]:
                 f"Header {number}'s name isn't a valid header name, "
                 "so the webhook isn't sent"
             )
-        if "\r" in value or "\n" in value or "\0" in value:
+        if _BAD_VALUE_CHAR.search(value):
             raise HeaderError(
-                f"Header {number} ({name}) has a line break or NUL in its value, "
-                "so the webhook isn't sent: check the token it uses"
+                f"Header {number} ({name}) has a line break or another character "
+                "a header can't carry in its value, so the webhook isn't sent: "
+                "check the token it uses"
             )
         rows.append(HeaderRow(number, name, value))
     return rows

@@ -71,10 +71,11 @@ header's value.
    A header name holds only letters, digits and the symbols
    ``! # $ % & ' * + - . ^ _ | ~`` and the backquote: no spaces or colons.
 
-``Header 2 (X-Alert-Host) has a line break or NUL in its value, so the webhook isn't sent: check the token it uses``
-   A token in the value filled in text holding a line break, from the search
-   result. Change the search so the field holds one line, for example
-   ``| eval host=replace(host, "[\r\n]", " ")``.
+``Header 2 (X-Alert-Host) has a line break or another character a header can't carry in its value, so the webhook isn't sent: check the token it uses``
+   A token in the value filled in text from the search result holding a line
+   break, a control character or a character outside Latin-1, such as ``→``
+   or an emoji. Change the search so the field holds one line of plain text,
+   for example ``| eval host=replace(host, "[\r\n]", " ")``.
 
 ``Header Authorization is set by both credential my_oauth and the alert's header 1, so the webhook isn't sent``
    Two sources set the same header. Remove the row, or pick a credential that
